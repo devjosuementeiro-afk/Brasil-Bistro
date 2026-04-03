@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ShoppingBag, Star, Plus, Minus, Inbox, UtensilsCrossed } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -56,7 +56,86 @@ export default function MenuPage() {
     return categoriaSelecionada === 'todas' || item.categoria_id === categoriaSelecionada
   })
 
+  const sortItensCardapio = useCallback((arr: ItemComCategoria[]) => {
+    return [...arr].sort((a, b) => {
+      if (a.destaque !== b.destaque) return Number(b.destaque) - Number(a.destaque)
+      return (a.ordem ?? 0) - (b.ordem ?? 0)
+    })
+  }, [])
+
+  /** Em "Todas": secções na ordem das categorias; dentro de cada uma, destaque depois ordem. */
+  const secoesPorCategoria = useMemo(() => {
+    if (categoriaSelecionada !== 'todas') return null
+
+    const byId = new Map<string, ItemComCategoria[]>()
+    for (const item of itensFiltrados) {
+      const key = item.categoria_id ?? '__sem_categoria__'
+      const list = byId.get(key)
+      if (list) list.push(item)
+      else byId.set(key, [item])
+    }
+
+    type Secao = {
+      id: string
+      nome: string
+      icone: string | null
+      items: ItemComCategoria[]
+    }
+    const out: Secao[] = []
+
+    for (const cat of categorias) {
+      const list = byId.get(cat.id)
+      if (list?.length) {
+        out.push({
+          id: cat.id,
+          nome: cat.nome,
+          icone: cat.icone,
+          items: sortItensCardapio(list),
+        })
+        byId.delete(cat.id)
+      }
+    }
+
+    const restantes = [...byId.entries()].sort(([, listaA], [, listaB]) => {
+      const nomeA = listaA[0]?.categorias?.nome ?? ''
+      const nomeB = listaB[0]?.categorias?.nome ?? ''
+      return nomeA.localeCompare(nomeB, undefined, { sensitivity: 'base' })
+    })
+
+    for (const [key, list] of restantes) {
+      if (!list.length) continue
+      const first = list[0]
+      const nome =
+        key === '__sem_categoria__'
+          ? t.noCategory
+          : first?.categorias?.nome ?? t.noCategory
+      out.push({
+        id: key === '__sem_categoria__' ? 'sem-categoria' : key,
+        nome,
+        icone: first?.categorias?.icone ?? null,
+        items: sortItensCardapio(list),
+      })
+    }
+
+    return out
+  }, [categoriaSelecionada, itensFiltrados, categorias, sortItensCardapio, t.noCategory])
+
+  const itensListaOrdenados = useMemo(
+    () => sortItensCardapio(itensFiltrados),
+    [itensFiltrados, sortItensCardapio]
+  )
+
   const destaques = itensFiltrados.filter((i) => i.destaque)
+
+  const destaquesOrdenados = useMemo(() => {
+    const ordemCat = new Map(categorias.map((c) => [c.id, c.ordem]))
+    return [...destaques].sort((a, b) => {
+      const oa = a.categoria_id != null ? (ordemCat.get(a.categoria_id) ?? 999) : 9999
+      const ob = b.categoria_id != null ? (ordemCat.get(b.categoria_id) ?? 999) : 9999
+      if (oa !== ob) return oa - ob
+      return (a.ordem ?? 0) - (b.ordem ?? 0)
+    })
+  }, [destaques, categorias])
 
   function getQtd(id: string) {
     return items.filter((ci) => ci.item.id === id).reduce((acc, ci) => acc + ci.quantity, 0)
@@ -179,7 +258,7 @@ export default function MenuPage() {
                   </div>
                 </div>
                 <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto scrollbar-hide pb-1 pl-1 pr-4">
-                  {destaques.map((item) => {
+                  {destaquesOrdenados.map((item) => {
                     const firstLineId = getFirstCartLineId(item.id)
                     return (
                       <DestaqueCard
@@ -207,24 +286,66 @@ export default function MenuPage() {
                   {itensFiltrados.length} {itensFiltrados.length === 1 ? t.item : t.items}
                 </span>
               </div>
-              <ul className="space-y-3 list-none p-0 m-0">
-                {itensFiltrados.map((item) => {
-                  const firstLineId = getFirstCartLineId(item.id)
-                  return (
-                    <li key={item.id}>
-                      <ItemCard
-                        item={item}
-                        qtd={getQtd(item.id)}
-                        addLabel={t.addToCart}
-                        currency={t.currency}
-                        onAdd={() => addItem(item, 1)}
-                        onInc={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) + 1)}
-                        onDec={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) - 1)}
-                      />
-                    </li>
-                  )
-                })}
-              </ul>
+              {categoriaSelecionada === 'todas' && secoesPorCategoria ? (
+                <div className="space-y-10">
+                  {secoesPorCategoria.map((secao) => (
+                    <section
+                      key={secao.id}
+                      aria-labelledby={`sec-cat-${secao.id}`}
+                      className="scroll-mt-4"
+                    >
+                      <h3
+                        id={`sec-cat-${secao.id}`}
+                        className="mb-3 flex items-center gap-2 border-b border-border/50 pb-2 font-serif text-base font-semibold tracking-tight text-foreground"
+                      >
+                        {secao.icone && (
+                          <span className="text-lg leading-none opacity-85" aria-hidden>
+                            {secao.icone}
+                          </span>
+                        )}
+                        {secao.nome}
+                      </h3>
+                      <ul className="list-none space-y-3 p-0 m-0">
+                        {secao.items.map((item) => {
+                          const firstLineId = getFirstCartLineId(item.id)
+                          return (
+                            <li key={item.id}>
+                              <ItemCard
+                                item={item}
+                                qtd={getQtd(item.id)}
+                                addLabel={t.addToCart}
+                                currency={t.currency}
+                                onAdd={() => addItem(item, 1)}
+                                onInc={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) + 1)}
+                                onDec={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) - 1)}
+                              />
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <ul className="space-y-3 list-none p-0 m-0">
+                  {itensListaOrdenados.map((item) => {
+                    const firstLineId = getFirstCartLineId(item.id)
+                    return (
+                      <li key={item.id}>
+                        <ItemCard
+                          item={item}
+                          qtd={getQtd(item.id)}
+                          addLabel={t.addToCart}
+                          currency={t.currency}
+                          onAdd={() => addItem(item, 1)}
+                          onInc={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) + 1)}
+                          onDec={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) - 1)}
+                        />
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
             </section>
           </div>
         )}

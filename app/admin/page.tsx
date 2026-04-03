@@ -734,76 +734,157 @@ export default function AdminPage() {
 
   const isItemsTab = tab === t.tabItems
 
+  const sidebarNav = (
+    <>
+      <div className="flex items-center gap-2.5 px-1 mb-6">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary">
+          <ChefHat size={20} className="text-primary-foreground" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t.adminPanel}</p>
+          <h1 className="truncate text-sm font-bold text-foreground">{t.adminTitle}</h1>
+        </div>
+      </div>
+      <nav className="flex flex-col gap-1" aria-label="Admin sections">
+        {TABS.map((a) => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => setTab(a)}
+            className={cn(
+              'rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors',
+              tab === a
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}
+          >
+            {a}
+          </button>
+        ))}
+      </nav>
+      <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
+        <Link
+          href="/admin/ordens"
+          className="rounded-xl bg-secondary px-3 py-2.5 text-center text-sm font-bold text-foreground transition-colors hover:bg-secondary/80"
+        >
+          Ordens
+        </Link>
+        <button
+          type="button"
+          onClick={toggleLang}
+          className="rounded-xl bg-secondary px-3 py-2.5 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary/80"
+          aria-label={lang === 'en' ? 'Switch to Portuguese' : 'Mudar para Ingles'}
+        >
+          {lang === 'en' ? 'PT' : 'EN'}
+        </button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <LogOut size={16} />
+          {t.logout}
+        </button>
+      </div>
+    </>
+  )
+
   return (
-    <main className="min-h-screen bg-background max-w-lg mx-auto">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b border-border px-4 pt-10 pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-              <ChefHat size={18} className="text-primary-foreground" />
+    <main className="min-h-screen bg-background lg:bg-muted/25">
+      {/* Desktop sidebar */}
+      <aside
+        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[220px] lg:flex-col lg:border-r lg:border-border/80 lg:bg-card lg:px-4 lg:pb-6 lg:pt-6 lg:shadow-sm"
+        aria-label="Admin menu"
+      >
+        {sidebarNav}
+      </aside>
+
+      <div className="lg:pl-[220px]">
+        {/* Mobile header + tabs */}
+        <header className="sticky top-0 z-30 border-b border-border bg-background lg:hidden">
+          <div className="px-4 pt-10 pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
+                  <ChefHat size={18} className="text-primary-foreground" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">{t.adminPanel}</p>
+                  <h1 className="text-base font-bold leading-tight text-foreground">{t.adminTitle}</h1>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/admin/ordens"
+                  className="rounded-xl bg-primary px-2.5 py-1.5 text-xs font-bold text-primary-foreground"
+                >
+                  Ordens
+                </Link>
+                <button
+                  type="button"
+                  onClick={toggleLang}
+                  className="rounded-xl bg-secondary px-2.5 py-1.5 text-xs font-bold text-muted-foreground"
+                  aria-label={lang === 'en' ? 'Switch to Portuguese' : 'Mudar para Ingles'}
+                >
+                  {lang === 'en' ? 'PT' : 'EN'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary"
+                >
+                  <LogOut size={15} />
+                  {t.logout}
+                </button>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">{t.adminPanel}</p>
-              <h1 className="text-base font-bold text-foreground leading-tight">{t.adminTitle}</h1>
+            <div className="mt-3 flex gap-1 rounded-xl bg-secondary p-1" role="tablist">
+              {TABS.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === a}
+                  onClick={() => setTab(a)}
+                  className={cn(
+                    'flex-1 rounded-lg py-2 text-sm font-semibold transition-colors',
+                    tab === a ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
+                  )}
+                >
+                  {a}
+                </button>
+              ))}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin/ordens"
-              className="text-xs font-bold px-2.5 py-1.5 rounded-xl bg-primary text-primary-foreground"
-            >
-              Ordens
-            </Link>
-            {/* Language toggle */}
-            <button
-              onClick={toggleLang}
-              className="text-xs font-bold px-2.5 py-1.5 rounded-xl bg-secondary text-muted-foreground"
-              aria-label={lang === 'en' ? 'Switch to Portuguese' : 'Mudar para Ingles'}
-            >
-              {lang === 'en' ? 'PT' : 'EN'}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium px-3 py-2 rounded-xl hover:bg-secondary transition-colors"
-            >
-              <LogOut size={15} />
-              {t.logout}
-            </button>
-          </div>
+        </header>
+
+        {/* Desktop page title */}
+        <div className="hidden border-b border-border/80 bg-background/95 px-8 py-5 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:block">
+          <h2 className="font-serif text-xl font-semibold tracking-tight text-foreground">
+            {isItemsTab ? t.tabItems : t.tabCategories}
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {isItemsTab
+              ? `${itens.length} ${itens.length === 1 ? t.item : t.items}`
+              : `${categorias.length} ${t.tabCategories.toLowerCase()}`}
+          </p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mt-3 bg-secondary rounded-xl p-1">
-          {TABS.map((a) => (
-            <button
-              key={a}
-              onClick={() => setTab(a)}
-              className={cn(
-                'flex-1 py-2 rounded-lg text-sm font-semibold transition-colors',
-                tab === a ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
-              )}
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <div className="px-4 pt-4 pb-8">
+        <div className="mx-auto max-w-lg px-4 pb-8 pt-4 lg:max-w-6xl lg:px-8 lg:pb-12 lg:pt-6">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-secondary rounded-2xl animate-pulse" />)}
           </div>
         ) : isItemsTab ? (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="mb-4 flex items-center justify-between gap-4 lg:mb-6">
+              <p className="text-sm text-muted-foreground lg:hidden">
                 {itens.length} {itens.length === 1 ? t.item : t.items}
               </p>
               <button
+                type="button"
                 onClick={abrirNovoItem}
-                className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl active:opacity-80 transition-opacity"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity active:opacity-80 lg:ml-auto"
               >
                 <Plus size={16} />
                 {t.newItem}
@@ -819,68 +900,168 @@ export default function AdminPage() {
                 onAcao={abrirNovoItem}
               />
             ) : (
-              <div className="space-y-3">
-                {itens.map((item) => (
-                  <div key={item.id} className="flex gap-3 bg-card rounded-2xl p-3 border border-border">
-                    {item.imagem_url ? (
-                      <img src={item.imagem_url} alt={item.nome} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-16 h-16 rounded-xl flex-shrink-0 bg-accent/10 flex items-center justify-center">
-                        <ImageIcon size={22} className="text-accent/50" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-1">
-                        <p className="font-semibold text-sm text-foreground line-clamp-1 flex-1">{item.nome}</p>
-                        {item.destaque && <Star size={12} className="text-accent fill-accent flex-shrink-0 mt-0.5" />}
-                      </div>
-                      {item.categorias && (
-                        <span className="text-[10px] text-accent font-semibold">{item.categorias.nome}</span>
+              <>
+                <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] border-collapse text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <th className="w-14 p-3" scope="col" />
+                          <th className="p-3" scope="col">
+                            {t.fieldName}
+                          </th>
+                          <th className="hidden p-3 lg:table-cell" scope="col">
+                            {t.fieldCategory}
+                          </th>
+                          <th className="whitespace-nowrap p-3" scope="col">
+                            {t.fieldPrice}
+                          </th>
+                          <th className="p-3" scope="col">
+                            {t.fieldAvailable}
+                          </th>
+                          <th className="w-32 p-3 text-right" scope="col">
+                            <span className="sr-only">Actions</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/80">
+                        {itens.map((item) => (
+                          <tr key={item.id} className="transition-colors hover:bg-muted/20">
+                            <td className="p-3 align-middle">
+                              {item.imagem_url ? (
+                                <img
+                                  src={item.imagem_url}
+                                  alt=""
+                                  className="h-11 w-11 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/10">
+                                  <ImageIcon size={18} className="text-accent/50" />
+                                </div>
+                              )}
+                            </td>
+                            <td className="max-w-[200px] p-3 align-middle lg:max-w-xs">
+                              <div className="flex items-start gap-1.5">
+                                <span className="line-clamp-2 font-semibold text-foreground">{item.nome}</span>
+                                {item.destaque && (
+                                  <Star size={14} className="mt-0.5 shrink-0 fill-accent text-accent" aria-label="Featured" />
+                                )}
+                              </div>
+                              {item.categorias && (
+                                <p className="mt-1 text-xs font-medium text-accent lg:hidden">{item.categorias.nome}</p>
+                              )}
+                            </td>
+                            <td className="hidden p-3 align-middle text-muted-foreground lg:table-cell">
+                              {item.categorias?.nome ?? '—'}
+                            </td>
+                            <td className="whitespace-nowrap p-3 align-middle font-semibold tabular-nums text-primary">
+                              ${item.preco.toFixed(2)}
+                            </td>
+                            <td className="p-3 align-middle">
+                              <button
+                                type="button"
+                                onClick={() => toggleDisponivel(item)}
+                                className={cn(
+                                  'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold',
+                                  item.disponivel ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'
+                                )}
+                              >
+                                {item.disponivel ? <Eye size={12} /> : <EyeOff size={12} />}
+                                {item.disponivel ? t.available : t.hidden}
+                              </button>
+                            </td>
+                            <td className="p-3 align-middle">
+                              <div className="flex justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => abrirEditarItem(item)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary transition-colors hover:bg-secondary/80"
+                                  aria-label="Edit"
+                                >
+                                  <Pencil size={14} className="text-foreground" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => excluirItem(item.id)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 transition-colors hover:bg-red-100"
+                                  aria-label="Delete"
+                                >
+                                  <Trash2 size={14} className="text-red-500" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {itens.map((item) => (
+                    <div key={item.id} className="flex gap-3 rounded-2xl border border-border bg-card p-3">
+                      {item.imagem_url ? (
+                        <img src={item.imagem_url} alt={item.nome} className="h-16 w-16 flex-shrink-0 rounded-xl object-cover" />
+                      ) : (
+                        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-accent/10">
+                          <ImageIcon size={22} className="text-accent/50" />
+                        </div>
                       )}
-                      <p className="text-accent font-bold text-sm mt-0.5">
-                        ${item.preco.toFixed(2)}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={() => toggleDisponivel(item)}
-                          className={cn(
-                            'flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg',
-                            item.disponivel ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'
-                          )}
-                        >
-                          {item.disponivel ? <Eye size={10} /> : <EyeOff size={10} />}
-                          {item.disponivel ? t.available : t.hidden}
-                        </button>
-                        <button
-                          onClick={() => abrirEditarItem(item)}
-                          className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center"
-                          aria-label="Edit"
-                        >
-                          <Pencil size={13} className="text-foreground" />
-                        </button>
-                        <button
-                          onClick={() => excluirItem(item.id)}
-                          className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center"
-                          aria-label="Delete"
-                        >
-                          <Trash2 size={13} className="text-red-500" />
-                        </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-1">
+                          <p className="line-clamp-1 flex-1 text-sm font-semibold text-foreground">{item.nome}</p>
+                          {item.destaque && <Star size={12} className="mt-0.5 flex-shrink-0 fill-accent text-accent" />}
+                        </div>
+                        {item.categorias && (
+                          <span className="text-[10px] font-semibold text-accent">{item.categorias.nome}</span>
+                        )}
+                        <p className="mt-0.5 text-sm font-bold text-accent">${item.preco.toFixed(2)}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleDisponivel(item)}
+                            className={cn(
+                              'flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold',
+                              item.disponivel ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'
+                            )}
+                          >
+                            {item.disponivel ? <Eye size={10} /> : <EyeOff size={10} />}
+                            {item.disponivel ? t.available : t.hidden}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => abrirEditarItem(item)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary"
+                            aria-label="Edit"
+                          >
+                            <Pencil size={13} className="text-foreground" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => excluirItem(item.id)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50"
+                            aria-label="Delete"
+                          >
+                            <Trash2 size={13} className="text-red-500" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="mb-4 flex items-center justify-between gap-4 lg:mb-6">
+              <p className="text-sm text-muted-foreground lg:hidden">
                 {categorias.length} {t.tabCategories.toLowerCase()}
               </p>
               <button
+                type="button"
                 onClick={abrirNovaCat}
-                className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl active:opacity-80 transition-opacity"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity active:opacity-80 lg:ml-auto"
               >
                 <Plus size={16} />
                 {t.newCategory}
@@ -896,34 +1077,116 @@ export default function AdminPage() {
                 onAcao={abrirNovaCat}
               />
             ) : (
-              <div className="space-y-3">
-                {categorias.map((cat) => (
-                  <div key={cat.id} className="flex items-center gap-3 bg-card rounded-2xl p-4 border border-border">
-                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl">{cat.icone ?? '📋'}</span>
+              <>
+                <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:block">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <th className="w-14 p-3" scope="col" />
+                        <th className="p-3" scope="col">
+                          {t.fieldName}
+                        </th>
+                        <th className="p-3" scope="col">
+                          {t.order}
+                        </th>
+                        <th className="p-3" scope="col">
+                          {t.fieldActive}
+                        </th>
+                        <th className="w-28 p-3 text-right" scope="col">
+                          <span className="sr-only">Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/80">
+                      {categorias.map((cat) => (
+                        <tr key={cat.id} className="transition-colors hover:bg-muted/20">
+                          <td className="p-3 align-middle">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-xl">
+                              {cat.icone ?? '📋'}
+                            </div>
+                          </td>
+                          <td className="p-3 align-middle font-semibold text-foreground">{cat.nome}</td>
+                          <td className="p-3 align-middle tabular-nums text-muted-foreground">{cat.ordem}</td>
+                          <td className="p-3 align-middle">
+                            <span
+                              className={cn(
+                                'inline-block rounded-lg px-2 py-1 text-[11px] font-semibold',
+                                cat.ativo ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'
+                              )}
+                            >
+                              {cat.ativo ? t.active : t.inactive}
+                            </span>
+                          </td>
+                          <td className="p-3 align-middle">
+                            <div className="flex justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => abrirEditarCat(cat)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary transition-colors hover:bg-secondary/80"
+                                aria-label="Edit"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => excluirCat(cat.id)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 transition-colors hover:bg-red-100"
+                                aria-label="Delete"
+                              >
+                                <Trash2 size={14} className="text-red-500" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {categorias.map((cat) => (
+                    <div key={cat.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-accent/10">
+                        <span className="text-xl">{cat.icone ?? '📋'}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground">{cat.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t.order} {cat.ordem}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          'rounded-lg px-2 py-1 text-[10px] font-semibold',
+                          cat.ativo ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'
+                        )}
+                      >
+                        {cat.ativo ? t.active : t.inactive}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => abrirEditarCat(cat)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary"
+                        aria-label="Edit"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => excluirCat(cat.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50"
+                        aria-label="Delete"
+                      >
+                        <Trash2 size={14} className="text-red-500" />
+                      </button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-foreground">{cat.nome}</p>
-                      <p className="text-xs text-muted-foreground">{t.order} {cat.ordem}</p>
-                    </div>
-                    <span className={cn(
-                      'text-[10px] font-semibold px-2 py-1 rounded-lg',
-                      cat.ativo ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'
-                    )}>
-                      {cat.ativo ? t.active : t.inactive}
-                    </span>
-                    <button onClick={() => abrirEditarCat(cat)} className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center" aria-label="Edit">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => excluirCat(cat.id)} className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center" aria-label="Delete">
-                      <Trash2 size={14} className="text-red-500" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </>
         )}
+        </div>
       </div>
 
       {/* Modal Item */}
@@ -1328,23 +1591,40 @@ function Modal({ titulo, children, onFechar, onSalvar, salvando, labelSave, labe
   titulo: string; children: React.ReactNode; onFechar: () => void; onSalvar: () => void; salvando: boolean; labelSave: string; labelSaving: string
 }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={onFechar}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 md:items-center md:p-4"
+      onClick={onFechar}
+      role="presentation"
+    >
       <div
-        className="w-full max-w-lg mx-auto bg-background rounded-t-3xl max-h-[92vh] overflow-y-auto"
+        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden bg-background md:max-h-[min(90vh,920px)] md:max-w-2xl md:rounded-2xl md:border md:border-border md:shadow-2xl rounded-t-3xl"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-modal-title"
       >
-        <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-border sticky top-0 bg-background z-10">
-          <h2 className="font-bold text-base text-foreground">{titulo}</h2>
-          <button onClick={onFechar} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-4 pb-3 pt-5 md:px-6 md:pb-4 md:pt-5">
+          <h2 id="admin-modal-title" className="text-base font-bold text-foreground md:text-lg">
+            {titulo}
+          </h2>
+          <button
+            type="button"
+            onClick={onFechar}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary transition-colors hover:bg-secondary/80"
+            aria-label="Close"
+          >
             <X size={16} />
           </button>
         </div>
-        <div className="px-4 py-4 space-y-4">{children}</div>
-        <div className="px-4 pb-8 pt-2 sticky bottom-0 bg-background border-t border-border">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
+          {children}
+        </div>
+        <div className="sticky bottom-0 border-t border-border bg-background px-4 pb-6 pt-3 md:px-6 md:pb-5 md:pt-4">
           <button
+            type="button"
             onClick={onSalvar}
             disabled={salvando}
-            className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 disabled:opacity-60 active:opacity-80 transition-opacity"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity active:opacity-80 disabled:opacity-60 md:py-3.5"
           >
             {salvando ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
             {salvando ? labelSaving : labelSave}
