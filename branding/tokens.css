@@ -1,0 +1,59 @@
+:root {
+  /* Cadu Cakes & Lanches — tokens principais */
+  --color-brand-brown: #531B04;
+  --color-brand-nude: #E1D3C7;
+  --color-brand-pink: #FB5B77;
+
+  /* Sugestões de uso para web */
+  --color-bg: var(--color-brand-nude);
+  --color-surface: #F6EFEA;
+  --color-text: var(--color-brand-brown);
+  --color-text-soft: #7A4A35;
+  --color-accent: var(--color-brand-pink);
+  --color-border: #D5C0B3;
+
+  /* Tipografia */
+  --font-display: "Ag Adumu Regular", "Brush Script MT", cursive;
+  --font-body: "Proxima Nova", "Montserrat", "Avenir Next", Arial, sans-serif;
+
+  /* Espaçamento e forma */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --shadow-soft: 0 10px 30px rgba(83, 27, 4, 0.12);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  color: var(--color-brand-brown);
+}
+
+.brand-accent {
+  color: var(--color-accent);
+}
+
+.button-primary {
+  background: var(--color-brand-brown);
+  color: #fff;
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: 14px 22px;
+  box-shadow: var(--shadow-soft);
+}
+
+.button-primary:hover {
+  filter: brightness(1.05);
+}
+
+.badge-highlight {
+  background: var(--color-brand-pink);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+}
