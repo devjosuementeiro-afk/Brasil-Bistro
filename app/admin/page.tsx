@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Plus, Pencil, Trash2, LogOut, ChefHat, X, Check,
-  Eye, EyeOff, Star, Package, ImageIcon, Upload, Loader2,
+  Eye, EyeOff, Star, Package, ImageIcon, Upload, Loader2, Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLang } from '@/lib/lang-context'
@@ -119,6 +119,11 @@ export default function AdminPage() {
   const [formCat, setFormCat] = useState({ nome: '', icone: '', ordem: 0, ativo: true })
   const [salvandoCat, setSalvandoCat] = useState(false)
 
+  const [filtroBuscaItens, setFiltroBuscaItens] = useState('')
+  const [filtroCategoriaId, setFiltroCategoriaId] = useState('')
+  const [filtroDisponivel, setFiltroDisponivel] = useState<'all' | 'yes' | 'no'>('all')
+  const [filtroDestaque, setFiltroDestaque] = useState<'all' | 'yes' | 'no'>('all')
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     const [{ data: cats }, { data: its }] = await Promise.all([
@@ -165,6 +170,49 @@ export default function AdminPage() {
       setFormCat((p) => ({ ...p, ordem: maxPosicaoCategoria }))
     }
   }, [modalCat, maxPosicaoCategoria])
+
+  const itensFiltradosAdmin = useMemo(() => {
+    const q = filtroBuscaItens.trim().toLowerCase()
+    return itens.filter((i) => {
+      if (q) {
+        const nome = i.nome.toLowerCase()
+        const desc = (i.descricao ?? '').toLowerCase()
+        if (!nome.includes(q) && !desc.includes(q)) return false
+      }
+      if (filtroCategoriaId && i.categoria_id !== filtroCategoriaId) return false
+      if (filtroDisponivel === 'yes' && !i.disponivel) return false
+      if (filtroDisponivel === 'no' && i.disponivel) return false
+      if (filtroDestaque === 'yes' && !i.destaque) return false
+      if (filtroDestaque === 'no' && i.destaque) return false
+      return true
+    })
+  }, [itens, filtroBuscaItens, filtroCategoriaId, filtroDisponivel, filtroDestaque])
+
+  const filtrosItensAtivos = useMemo(
+    () =>
+      Boolean(filtroBuscaItens.trim()) ||
+      Boolean(filtroCategoriaId) ||
+      filtroDisponivel !== 'all' ||
+      filtroDestaque !== 'all',
+    [filtroBuscaItens, filtroCategoriaId, filtroDisponivel, filtroDestaque]
+  )
+
+  function limparFiltrosItens() {
+    setFiltroBuscaItens('')
+    setFiltroCategoriaId('')
+    setFiltroDisponivel('all')
+    setFiltroDestaque('all')
+  }
+
+  const textoContagemItens = useMemo(() => {
+    if (itens.length === 0) return `0 ${t.items}`
+    if (filtrosItensAtivos) {
+      return t.adminShowingCount
+        .replace('{n}', String(itensFiltradosAdmin.length))
+        .replace('{total}', String(itens.length))
+    }
+    return `${itens.length} ${itens.length === 1 ? t.item : t.items}`
+  }, [itens.length, itensFiltradosAdmin.length, filtrosItensAtivos, t.adminShowingCount, t.item, t.items])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -864,9 +912,7 @@ export default function AdminPage() {
             {isItemsTab ? t.tabItems : t.tabCategories}
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {isItemsTab
-              ? `${itens.length} ${itens.length === 1 ? t.item : t.items}`
-              : `${categorias.length} ${t.tabCategories.toLowerCase()}`}
+            {isItemsTab ? textoContagemItens : `${categorias.length} ${t.tabCategories.toLowerCase()}`}
           </p>
         </div>
 
@@ -878,9 +924,7 @@ export default function AdminPage() {
         ) : isItemsTab ? (
           <>
             <div className="mb-4 flex items-center justify-between gap-4 lg:mb-6">
-              <p className="text-sm text-muted-foreground lg:hidden">
-                {itens.length} {itens.length === 1 ? t.item : t.items}
-              </p>
+              <p className="text-sm text-muted-foreground lg:hidden">{textoContagemItens}</p>
               <button
                 type="button"
                 onClick={abrirNovoItem}
@@ -901,6 +945,109 @@ export default function AdminPage() {
               />
             ) : (
               <>
+                <div
+                  className="mb-4 space-y-3 rounded-2xl border border-border bg-card p-3 shadow-sm lg:flex lg:flex-wrap lg:items-end lg:gap-3 lg:space-y-0"
+                  role="search"
+                  aria-label={t.adminFilterSearch}
+                >
+                  <div className="min-w-0 flex-1 lg:min-w-[200px] lg:max-w-sm">
+                    <label htmlFor="admin-filtro-busca" className="mb-1 block text-xs font-semibold text-foreground">
+                      {t.adminFilterSearch}
+                    </label>
+                    <div className="relative">
+                      <Search
+                        size={16}
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <input
+                        id="admin-filtro-busca"
+                        type="search"
+                        value={filtroBuscaItens}
+                        onChange={(e) => setFiltroBuscaItens(e.target.value)}
+                        placeholder={t.adminFilterSearchPlaceholder}
+                        className="w-full rounded-xl border border-transparent bg-secondary py-2.5 pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/25 focus:ring-2 focus:ring-primary/15"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:flex lg:shrink-0 lg:gap-3">
+                    <div className="min-w-0 sm:min-w-[140px]">
+                      <label htmlFor="admin-filtro-cat" className="mb-1 block text-xs font-semibold text-foreground">
+                        {t.fieldCategory}
+                      </label>
+                      <select
+                        id="admin-filtro-cat"
+                        value={filtroCategoriaId}
+                        onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                        className="w-full rounded-xl border border-transparent bg-secondary px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/15"
+                      >
+                        <option value="">{t.all}</option>
+                        {categorias.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="min-w-0 sm:min-w-[130px]">
+                      <label htmlFor="admin-filtro-disp" className="mb-1 block text-xs font-semibold text-foreground">
+                        {t.adminFilterAvailability}
+                      </label>
+                      <select
+                        id="admin-filtro-disp"
+                        value={filtroDisponivel}
+                        onChange={(e) => setFiltroDisponivel(e.target.value as 'all' | 'yes' | 'no')}
+                        className="w-full rounded-xl border border-transparent bg-secondary px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/15"
+                      >
+                        <option value="all">{t.all}</option>
+                        <option value="yes">{t.available}</option>
+                        <option value="no">{t.hidden}</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2 min-w-0 sm:col-span-1 sm:min-w-[130px]">
+                      <label htmlFor="admin-filtro-dest" className="mb-1 block text-xs font-semibold text-foreground">
+                        {t.adminFilterFeatured}
+                      </label>
+                      <select
+                        id="admin-filtro-dest"
+                        value={filtroDestaque}
+                        onChange={(e) => setFiltroDestaque(e.target.value as 'all' | 'yes' | 'no')}
+                        className="w-full rounded-xl border border-transparent bg-secondary px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/15"
+                      >
+                        <option value="all">{t.all}</option>
+                        <option value="yes">{t.adminFilterYesOnly}</option>
+                        <option value="no">{t.adminFilterNoOnly}</option>
+                      </select>
+                    </div>
+                  </div>
+                  {filtrosItensAtivos && (
+                    <div className="flex items-end lg:shrink-0">
+                      <button
+                        type="button"
+                        onClick={limparFiltrosItens}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary lg:w-auto"
+                      >
+                        {t.adminClearFilters}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {itensFiltradosAdmin.length === 0 ? (
+                  <div className="flex flex-col items-center rounded-2xl border border-dashed border-border/80 bg-card/60 px-6 py-14 text-center">
+                    <Search size={32} className="text-muted-foreground/70" aria-hidden />
+                    <p className="mt-4 font-semibold text-foreground">{t.adminNoFilterResults}</p>
+                    <button
+                      type="button"
+                      onClick={limparFiltrosItens}
+                      className="mt-4 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+                    >
+                      {t.adminClearFilters}
+                    </button>
+                  </div>
+                ) : (
+                  <>
                 <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:block">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[640px] border-collapse text-sm">
@@ -925,7 +1072,7 @@ export default function AdminPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/80">
-                        {itens.map((item) => (
+                        {itensFiltradosAdmin.map((item) => (
                           <tr key={item.id} className="transition-colors hover:bg-muted/20">
                             <td className="p-3 align-middle">
                               {item.imagem_url ? (
@@ -998,7 +1145,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="space-y-3 md:hidden">
-                  {itens.map((item) => (
+                  {itensFiltradosAdmin.map((item) => (
                     <div key={item.id} className="flex gap-3 rounded-2xl border border-border bg-card p-3">
                       {item.imagem_url ? (
                         <img src={item.imagem_url} alt={item.nome} className="h-16 w-16 flex-shrink-0 rounded-xl object-cover" />
@@ -1049,6 +1196,8 @@ export default function AdminPage() {
                     </div>
                   ))}
                 </div>
+                  </>
+                )}
               </>
             )}
           </>
