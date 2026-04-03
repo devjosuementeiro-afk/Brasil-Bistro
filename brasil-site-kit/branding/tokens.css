@@ -1,0 +1,45 @@
+:root {
+  --brasil-gold: #DBAA09;
+  --brasil-black: #000000;
+  --brasil-white: #FFFFFF;
+  --brasil-offwhite: #F7F4EC;
+  --brasil-gray: #1A1A1A;
+
+  --font-brand: "Cormorant Garamond", "Times New Roman", serif;
+  --font-ui: "Inter", "Arial", sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.10);
+}
+
+.brand-bg-gold { background: var(--brasil-gold); }
+.brand-bg-black { background: var(--brasil-black); }
+.brand-text-gold { color: var(--brasil-gold); }
+.brand-text-black { color: var(--brasil-black); }
+.brand-text-white { color: var(--brasil-white); }
+
+.brand-logo {
+  max-width: 320px;
+  width: 100%;
+  height: auto;
+}
+
+.brand-section {
+  padding: 72px 24px;
+}
+
+.brand-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: var(--brasil-gold);
+  color: var(--brasil-black);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  text-decoration: none;
+}

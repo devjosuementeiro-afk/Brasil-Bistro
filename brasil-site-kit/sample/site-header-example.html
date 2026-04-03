@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brasil Bistro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../branding/tokens.css">
+  <style>
+    body {
+      margin: 0;
+      background: #F7F4EC;
+      color: #000;
+      font-family: var(--font-ui);
+    }
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      align-items: center;
+      gap: 40px;
+      padding: 64px;
+      box-sizing: border-box;
+    }
+    .hero__copy h1 {
+      margin: 0 0 20px;
+      font-family: var(--font-brand);
+      font-size: clamp(3rem, 7vw, 6rem);
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+    }
+    .hero__copy p {
+      max-width: 560px;
+      font-size: 1.1rem;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+    .hero__art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      border-radius: 32px;
+      min-height: 520px;
+      box-shadow: var(--shadow-soft);
+    }
+    .hero__art img {
+      max-width: 78%;
+      height: auto;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 64px 0;
+    }
+    .topbar img {
+      height: 52px;
+      width: auto;
+    }
+    .menu {
+      display: flex;
+      gap: 24px;
+      font-weight: 600;
+    }
+    .menu a {
+      color: #000;
+      text-decoration: none;
+    }
+    @media (max-width: 900px) {
+      .topbar { padding: 24px 24px 0; }
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 24px 24px 48px;
+      }
+      .hero__art {
+        min-height: 360px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <img src="../logo/logo-principal-preto.png" alt="Brasil Bistro">
+    <nav class="menu">
+      <a href="#">Menu</a>
+      <a href="#">Reservas</a>
+      <a href="#">Contato</a>
+    </nav>
+  </header>
+
+  <main class="hero">
+    <section class="hero__copy">
+      <h1>Uma identidade elegante, brasileira e contemporânea.</h1>
+      <p>
+        Use a combinação de preto, branco e dourado para criar uma presença sofisticada.
+        O símbolo da palmeira funciona muito bem em favicon, ícone de app, redes sociais
+        e detalhes do layout.
+      </p>
+      <a class="brand-button" href="#">Ver cardápio</a>
+    </section>
+
+    <section class="hero__art">
+      <img src="../logo/logo-principal-claro.png" alt="Brasil Bistro em versão clara">
+    </section>
+  </main>
+</body>
+</html>
