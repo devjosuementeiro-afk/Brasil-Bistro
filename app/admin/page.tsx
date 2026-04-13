@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLang } from '@/lib/lang-context'
+import { LogoLoadingScreen } from '@/components/logo-loading-screen'
 
 const BUCKET = 'cardapio-imagens'
 
@@ -817,6 +818,12 @@ export default function AdminPage() {
         >
           Ordens
         </Link>
+        <Link
+          href="/admin/promocoes"
+          className="rounded-xl bg-secondary px-3 py-2.5 text-center text-sm font-bold text-foreground transition-colors hover:bg-secondary/80"
+        >
+          {t.promoNavLink}
+        </Link>
         <button
           type="button"
           onClick={toggleLang}
@@ -868,6 +875,12 @@ export default function AdminPage() {
                 >
                   Ordens
                 </Link>
+                <Link
+                  href="/admin/promocoes"
+                  className="rounded-xl bg-secondary px-2.5 py-1.5 text-xs font-bold text-muted-foreground"
+                >
+                  {t.promoNavLink}
+                </Link>
                 <button
                   type="button"
                   onClick={toggleLang}
@@ -918,9 +931,11 @@ export default function AdminPage() {
 
         <div className="mx-auto max-w-lg px-4 pb-8 pt-4 lg:max-w-6xl lg:px-8 lg:pb-12 lg:pt-6">
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-secondary rounded-2xl animate-pulse" />)}
-          </div>
+          <LogoLoadingScreen
+            variant="contained"
+            message={t.loadingAdmin}
+            className="min-h-[min(480px,70vh)] lg:min-h-[55vh]"
+          />
         ) : isItemsTab ? (
           <>
             <div className="mb-4 flex items-center justify-between gap-4 lg:mb-6">

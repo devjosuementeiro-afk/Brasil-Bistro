@@ -1,0 +1,14 @@
+NEXT_PUBLIC_SUPABASE_URL="https://nexafwadxqpjbqqztdty.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5leGFmd2FkeHFwamJxcXp0ZHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0ODUyMjcsImV4cCI6MjA5MDA2MTIyN30.5ewCo-CvT6BMhWJYE1RWTuFIgTvDia_WwRnsDF-gb8k"
+
+# Chave service_role (somente servidor). O código atual usa apenas anon key,
+# mas mantemos para quando você for precisar de operações privilegiadas.
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5leGFmd2FkeHFwamJxcXp0ZHR5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ4NTIyNywiZXhwIjoyMDkwMDYxMjI3fQ.3-XJxhdu1kGPn9sHKKKNd68TWiFZ-sTXglOhABqA-4Y"
+
+# PayPal SDK v6 (producao)
+NEXT_PUBLIC_PAYPAL_ENV="live"
+NEXT_PUBLIC_PAYPAL_CLIENT_ID="AXhfcqvJedctkT5G-sIaj9tweIGztUz4z8eahG_nL9h6fRB_WZKChsuNgq3qw7PU2ldL22TLdc78wtcF"
+PAYPAL_ENV="live"
+PAYPAL_CLIENT_ID="AXhfcqvJedctkT5G-sIaj9tweIGztUz4z8eahG_nL9h6fRB_WZKChsuNgq3qw7PU2ldL22TLdc78wtcF"
+PAYPAL_CLIENT_SECRET="EEGxJGbkgclJFuISWECnRlT8d7h0geEXjIq7UWpyhLag_OfcDifSTjYzQVrOKRPdbJaqBPpolSvzmuze"
+PAYPAL_WEBHOOK_ID="8FW53776LH595203J"

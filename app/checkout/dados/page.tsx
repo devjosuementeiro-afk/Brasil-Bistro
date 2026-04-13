@@ -13,6 +13,7 @@ import {
   saveCheckoutCustomer,
   type CheckoutCustomer,
 } from '@/lib/checkout-customer'
+import { LogoLoadingScreen } from '@/components/logo-loading-screen'
 
 export default function CheckoutDadosPage() {
   const router = useRouter()
@@ -31,6 +32,7 @@ export default function CheckoutDadosPage() {
   const [erro, setErro] = useState<string | null>(null)
 
   const loadSession = useCallback(async () => {
+    setErro(null)
     setLoading(true)
     const {
       data: { user },
@@ -38,14 +40,14 @@ export default function CheckoutDadosPage() {
 
     if (!user) {
       setUserId(null)
+      setAceitaEmail(false)
+      setPrefereSalvarCartao(false)
       const saved = loadCheckoutCustomer()
       if (saved) {
         setNome(saved.nome)
         setEmail(saved.email)
         setTelefone(saved.telefone)
         setAceitaSms(saved.aceitaSmsAtualizacoes)
-        setAceitaEmail(saved.aceitaEmailAtualizacoes)
-        setPrefereSalvarCartao(saved.prefereSalvarCartao)
       } else {
         setAceitaSms(false)
       }
@@ -54,7 +56,8 @@ export default function CheckoutDadosPage() {
     }
 
     setUserId(user.id)
-    setEmail(user.email ?? '')
+    const emailVal = user.email ?? ''
+    setEmail(emailVal)
 
     const meta = user.user_metadata as { nome_completo?: string; telefone?: string }
     const { data: perfil } = await supabase
@@ -65,13 +68,52 @@ export default function CheckoutDadosPage() {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    setNome(perfil?.nome_completo ?? meta.nome_completo ?? '')
-    setTelefone(perfil?.telefone ?? meta.telefone ?? '')
-    setAceitaSms(!!perfil?.aceita_sms_atualizacoes_pedido)
-    setAceitaEmail(!!perfil?.aceita_email_atualizacoes_pedido)
-    setPrefereSalvarCartao(!!perfil?.prefere_salvar_cartao_futuro)
+    const nomeVal = perfil?.nome_completo ?? meta.nome_completo ?? ''
+    const telefoneVal = perfil?.telefone ?? meta.telefone ?? ''
+    const aceitaSmsVal = !!perfil?.aceita_sms_atualizacoes_pedido
+    const aceitaEmailVal = !!perfil?.aceita_email_atualizacoes_pedido
+    const prefereVal = !!perfil?.prefere_salvar_cartao_futuro
+
+    setNome(nomeVal)
+    setTelefone(telefoneVal)
+    setAceitaSms(aceitaSmsVal)
+    setAceitaEmail(aceitaEmailVal)
+    setPrefereSalvarCartao(prefereVal)
+
+    const c: CheckoutCustomer = {
+      nome: nomeVal,
+      email: emailVal,
+      telefone: telefoneVal,
+      userId: user.id,
+      aceitaSmsAtualizacoes: aceitaSmsVal,
+      aceitaEmailAtualizacoes: aceitaEmailVal,
+      prefereSalvarCartao: prefereVal,
+    }
+
+    if (isValidCheckoutCustomer(c)) {
+      const { error: upErr } = await supabase.from('cliente_perfis').upsert(
+        {
+          user_id: user.id,
+          nome_completo: c.nome.trim(),
+          telefone: c.telefone,
+          aceita_sms_atualizacoes_pedido: aceitaSmsVal,
+          aceita_email_atualizacoes_pedido: aceitaEmailVal,
+          prefere_salvar_cartao_futuro: prefereVal,
+        },
+        { onConflict: 'user_id' }
+      )
+      if (upErr) {
+        setErro(upErr.message)
+        setLoading(false)
+        return
+      }
+      saveCheckoutCustomer(c)
+      router.replace('/pagamento')
+      return
+    }
+
     setLoading(false)
-  }, [supabase])
+  }, [supabase, router])
 
   useEffect(() => {
     void loadSession()
@@ -116,8 +158,8 @@ export default function CheckoutDadosPage() {
       telefone: telRaw,
       userId,
       aceitaSmsAtualizacoes: aceitaSms,
-      aceitaEmailAtualizacoes: aceitaEmail,
-      prefereSalvarCartao,
+      aceitaEmailAtualizacoes: userId ? aceitaEmail : false,
+      prefereSalvarCartao: userId ? prefereSalvarCartao : false,
     }
 
     if (!isValidCheckoutCustomer(c)) {
@@ -153,8 +195,8 @@ export default function CheckoutDadosPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto min-h-screen max-w-lg bg-background px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <p className="text-sm text-muted-foreground">{t.checkoutLoading}</p>
+      <main className="mx-auto max-w-lg bg-background">
+        <LogoLoadingScreen variant="fullscreen" message={t.checkoutLoading} />
       </main>
     )
   }
@@ -274,106 +316,24 @@ export default function CheckoutDadosPage() {
             <p className="mt-1 text-[10px] text-muted-foreground">{t.checkoutEmailHelp}</p>
           </div>
 
-          {isGuest ? (
-            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-foreground">{t.checkoutOrderPrefsTitle}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAceitaSms(true)
-                    setAceitaEmail(true)
-                    setPrefereSalvarCartao(true)
-                  }}
-                  className="shrink-0 rounded-lg border border-primary/35 bg-primary/5 px-3 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
-                >
-                  {t.checkoutSelectAll}
-                </button>
-              </div>
-              <p className="text-[11px] leading-snug text-muted-foreground">{t.checkoutPrefsAllOptional}</p>
+          <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+            <p className="text-xs font-semibold text-foreground">{t.checkoutOrderPrefsTitle}</p>
+            <p className="text-[11px] leading-snug text-muted-foreground">{t.checkoutPrefsAllOptional}</p>
 
-              <div className="space-y-3 pt-1">
-                <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-snug text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={aceitaSms}
-                    onChange={(e) => setAceitaSms(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary/30"
-                  />
-                  <span className="space-y-1.5 text-foreground">
-                    <span className="block">{t.registerSmsConsentLine1}</span>
-                    <span className="block text-muted-foreground">{t.registerSmsConsentLine2}</span>
-                    <span className="block text-muted-foreground">{t.registerSmsConsentLine3}</span>
-                  </span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-snug text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={aceitaEmail}
-                    onChange={(e) => setAceitaEmail(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary/30"
-                  />
-                  <span className="text-foreground">{t.registerPrefEmailLabel}</span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-snug text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={prefereSalvarCartao}
-                    onChange={(e) => setPrefereSalvarCartao(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary/30"
-                  />
-                  <span className="text-foreground">{t.registerPrefCardLabel}</span>
-                </label>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3 rounded-2xl border border-border bg-card p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-foreground">{t.checkoutCommPrefs}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAceitaSms(true)
-                    setAceitaEmail(true)
-                    setPrefereSalvarCartao(true)
-                  }}
-                  className="shrink-0 rounded-lg border border-primary/35 bg-primary/5 px-3 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
-                >
-                  {t.checkoutSelectAll}
-                </button>
-              </div>
-              <p className="text-[11px] leading-snug text-muted-foreground">{t.checkoutPrefsAllOptional}</p>
-              <div className="space-y-3 pt-0.5">
-                <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-snug text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={aceitaSms}
-                    onChange={(e) => setAceitaSms(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary/30"
-                  />
-                  <span className="text-foreground">{t.checkoutPrefSms}</span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-snug text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={aceitaEmail}
-                    onChange={(e) => setAceitaEmail(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary/30"
-                  />
-                  <span className="text-foreground">{t.registerPrefEmailLabel}</span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-snug text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={prefereSalvarCartao}
-                    onChange={(e) => setPrefereSalvarCartao(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary/30"
-                  />
-                  <span className="text-foreground">{t.registerPrefCardLabel}</span>
-                </label>
-              </div>
-            </div>
-          )}
+            <label className="flex cursor-pointer items-start gap-2.5 pt-1 text-[11px] leading-snug text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={aceitaSms}
+                onChange={(e) => setAceitaSms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary/30"
+              />
+              <span className="space-y-1.5 text-foreground">
+                <span className="block">{t.registerSmsConsentLine1}</span>
+                <span className="block text-muted-foreground">{t.registerSmsConsentLine2}</span>
+                <span className="block text-muted-foreground">{t.registerSmsConsentLine3}</span>
+              </span>
+            </label>
+          </div>
 
           {erro && (
             <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600" role="alert">

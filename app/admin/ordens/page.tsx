@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ChefHat } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useLang } from '@/lib/lang-context'
+import { LogoLoadingScreen } from '@/components/logo-loading-screen'
 
 type KitchenStatus = 'new' | 'preparing' | 'delivered'
 
@@ -34,7 +36,18 @@ const STATUS_COLUMNS: Array<{ key: KitchenStatus; title: string }> = [
   { key: 'delivered', title: 'Entregue' },
 ]
 
+/** ISO do Postgres (timestamptz) → texto no fuso/locale do navegador (ex.: US vs BR). */
+function formatPedidoInstante(iso: string) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(d)
+}
+
 export default function AdminOrdensPage() {
+  const { t } = useLang()
   const supabase = useMemo(() => createClient(), [])
   const [orders, setOrders] = useState<KitchenOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,7 +115,11 @@ export default function AdminOrdensPage() {
 
       <section className="max-w-7xl mx-auto p-4">
         {loading ? (
-          <div className="text-sm text-muted-foreground">Carregando ordens...</div>
+          <LogoLoadingScreen
+            variant="contained"
+            message={t.loadingOrders}
+            className="min-h-[min(420px,65vh)] bg-[#F6F7FA]"
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {STATUS_COLUMNS.map((col) => {
@@ -126,11 +143,18 @@ export default function AdminOrdensPage() {
                         key={order.id}
                         className="w-full text-left rounded-xl border border-border p-3 bg-[#FCFCFD]"
                       >
-                        <div className="flex justify-between items-start">
-                          <p className="font-bold text-sm">
-                            #{order.id.replace(/-/g, '').slice(-8).toUpperCase()}
-                          </p>
-                          <p className="text-xs text-foreground font-semibold">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm">
+                              #{order.id.replace(/-/g, '').slice(-8).toUpperCase()}
+                            </p>
+                            {order.criado_em && (
+                              <p className="mt-0.5 text-[10px] text-muted-foreground" title={order.criado_em}>
+                                {formatPedidoInstante(order.criado_em)}
+                              </p>
+                            )}
+                          </div>
+                          <p className="shrink-0 text-xs font-semibold text-foreground">
                             Total $
                             {Number(
                               order.valor_pago != null ? order.valor_pago : order.valor_total ?? 0

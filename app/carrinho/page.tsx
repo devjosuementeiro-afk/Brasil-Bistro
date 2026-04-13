@@ -1,14 +1,33 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useCart } from '@/lib/cart-context'
 import { useLang } from '@/lib/lang-context'
-import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag } from 'lucide-react'
+import { formatPromotionHints } from '@/lib/promo-hint-format'
+import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag, Tag } from 'lucide-react'
 import Link from 'next/link'
 
 export default function CarrinhoPage() {
-  const { items, updateQuantity, removeItem, totalPrice, totalItems, clearCart } =
-    useCart()
-  const { t } = useLang()
+  const {
+    items,
+    updateQuantity,
+    removeItem,
+    totalItems,
+    clearCart,
+    promoCode,
+    setPromoCode,
+    promotionResult,
+    promotionLoading,
+    promotionError,
+    subtotalBeforePromo,
+    totalWithPromotion,
+  } = useCart()
+  const { t, lang } = useLang()
+  const [promoDraft, setPromoDraft] = useState(promoCode)
+
+  useEffect(() => {
+    setPromoDraft(promoCode)
+  }, [promoCode])
 
   if (items.length === 0) {
     return (
@@ -64,6 +83,36 @@ export default function CarrinhoPage() {
       </header>
 
       <div className="px-4 pt-4 space-y-3">
+        {promotionResult && promotionResult.discountAmount > 0 && (
+          <div className="flex gap-2 rounded-xl border border-primary/35 bg-primary/8 p-3 text-sm shadow-sm">
+            <Tag className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <div className="min-w-0 space-y-1">
+              <p className="font-semibold text-foreground">{t.cartPromoApplied}</p>
+              <p className="text-muted-foreground leading-snug">{t.cartPromoStoreOff}</p>
+              {promotionResult.breakdown.map((b) => (
+                <p key={b.label} className="text-xs text-foreground/90">
+                  {b.label}: −{t.currency}
+                  {b.amount.toFixed(2)}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+        {promotionResult &&
+          promotionResult.discountAmount <= 0 &&
+          formatPromotionHints(promotionResult.hints, lang, t.currency).map((line) => (
+            <p
+              key={line}
+              className="rounded-xl border border-border/80 bg-muted/40 px-3 py-2 text-xs leading-snug text-muted-foreground"
+            >
+              {line}
+            </p>
+          ))}
+        {promotionResult?.codeInvalid && promoCode.trim() ? (
+          <p className="text-xs text-destructive">{t.cartPromoInvalid}</p>
+        ) : null}
+        {promotionError ? <p className="text-xs text-destructive">{promotionError}</p> : null}
+
         {items.map(({ cartItemId, item, quantity, totalPrice: itemTotal, observation, selectedOptions }) => (
           <div
             key={cartItemId}
@@ -129,6 +178,30 @@ export default function CarrinhoPage() {
             </div>
           </div>
         ))}
+
+        <div className="rounded-xl border border-border/80 bg-card p-3 shadow-sm">
+          <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t.cartPromoCodeLabel}
+          </label>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="text"
+              value={promoDraft}
+              onChange={(e) => setPromoDraft(e.target.value)}
+              className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              placeholder=""
+              autoCapitalize="characters"
+              autoCorrect="off"
+            />
+            <button
+              type="button"
+              onClick={() => setPromoCode(promoDraft.trim())}
+              className="shrink-0 rounded-lg bg-secondary px-3 py-2 text-xs font-semibold text-secondary-foreground"
+            >
+              {t.cartPromoApply}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Resumo fixo */}
@@ -141,16 +214,31 @@ export default function CarrinhoPage() {
             <span>
               {totalItems} {totalItems === 1 ? t.item : t.items}
             </span>
+            {promotionLoading ? (
+              <span className="text-[11px] tabular-nums opacity-70">…</span>
+            ) : null}
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{t.cartSubtotal}</span>
             <span className="tabular-nums">
               {t.currency}
-              {totalPrice.toFixed(2)}
+              {subtotalBeforePromo.toFixed(2)}
             </span>
           </div>
+          {promotionResult && promotionResult.discountAmount > 0 ? (
+            <div className="flex justify-between text-xs font-medium text-primary">
+              <span>{t.cartDiscount}</span>
+              <span className="tabular-nums">
+                −{t.currency}
+                {promotionResult.discountAmount.toFixed(2)}
+              </span>
+            </div>
+          ) : null}
           <div className="flex justify-between text-base font-semibold">
             <span>{t.total}</span>
             <span className="font-serif text-lg tabular-nums text-primary">
               {t.currency}
-              {totalPrice.toFixed(2)}
+              {totalWithPromotion.toFixed(2)}
             </span>
           </div>
         </div>

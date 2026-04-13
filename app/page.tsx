@@ -9,6 +9,7 @@ import { useCart, type ItemCardapio } from '@/lib/cart-context'
 import { useLang } from '@/lib/lang-context'
 import { cn } from '@/lib/utils'
 import logoPrincipal from '@/logo/logo-principal-preto.png'
+import { LogoLoadingScreen } from '@/components/logo-loading-screen'
 
 interface Categoria {
   id: string
@@ -145,6 +146,10 @@ export default function MenuPage() {
     return items.find((ci) => ci.item.id === id)?.cartItemId ?? null
   }
 
+  if (loading) {
+    return <LogoLoadingScreen message={t.loadingMenu} />
+  }
+
   return (
     <main className="mx-auto min-h-screen max-w-lg bg-background pb-28">
       <header className="sticky top-0 z-40 border-b border-border/80 bg-card/80 shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur-xl">
@@ -222,13 +227,7 @@ export default function MenuPage() {
       </header>
 
       <div className="px-4 pt-6">
-        {loading ? (
-          <div className="space-y-3" aria-busy="true" aria-label="Carregando cardápio">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-[88px] animate-pulse rounded-xl bg-muted" />
-            ))}
-          </div>
-        ) : itensFiltrados.length === 0 ? (
+        {itensFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-card/80 px-6 py-16 text-center shadow-[var(--shadow-card)]">
             <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl border border-border/60 bg-secondary/80">
               <Inbox size={24} className="text-muted-foreground" aria-hidden />

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useCart, type ItemCardapio } from '@/lib/cart-context'
 import { useParams, useRouter } from 'next/navigation'
 import { useLang } from '@/lib/lang-context'
+import { LogoLoadingScreen } from '@/components/logo-loading-screen'
 
 type ItemDetalhe = ItemCardapio & {
   disponivel: boolean
@@ -281,7 +282,7 @@ export default function ProdutoDetalhePage() {
     }, 0)
 
   if (loading) {
-    return <main className="min-h-screen bg-background max-w-lg mx-auto p-4" />
+    return <LogoLoadingScreen message={t.loadingProduct} />
   }
 
   if (!item) {

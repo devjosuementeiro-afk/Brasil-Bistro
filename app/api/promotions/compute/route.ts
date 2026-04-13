@@ -1,0 +1,39 @@
+import { NextResponse } from 'next/server'
+import { computePromotionForOrderCart } from '@/lib/order-promotions'
+
+type Body = {
+  items?: Array<{
+    item?: { id?: string; categoria_id?: string | null }
+    totalPrice?: number
+  }>
+  promoCode?: string | null
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json().catch(() => ({}))) as Body
+    const raw = body.items ?? []
+    const cart = raw
+      .map((row) => {
+        const id = row.item?.id
+        if (typeof id !== 'string') return null
+        const lineTotal = Number(row.totalPrice)
+        if (!Number.isFinite(lineTotal) || lineTotal <= 0) return null
+        return {
+          id,
+          quantity: 1,
+          unitAmount: lineTotal,
+          categoria_id: row.item?.categoria_id ?? null,
+        }
+      })
+      .filter((x): x is NonNullable<typeof x> => x != null)
+
+    const result = await computePromotionForOrderCart(cart, body.promoCode ?? null)
+    return NextResponse.json(result)
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'Erro ao calcular promoções.' },
+      { status: 500 }
+    )
+  }
+}

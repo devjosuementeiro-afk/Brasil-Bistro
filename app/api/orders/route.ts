@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { parseCustomerPayload } from '@/lib/checkout-customer'
+import { computePromotionForOrderCart } from '@/lib/order-promotions'
 
 const PAYPAL_API_BASE =
   process.env.PAYPAL_ENV === 'live'
@@ -36,11 +37,13 @@ async function getPayPalAccessToken() {
 
 type OrderRequestBody = {
   customer?: unknown
+  promoCode?: string | null
   cart?: Array<{
     id: string
     name: string
     quantity: number
     unitAmount: number
+    categoria_id?: string | null
     observation?: string
     selectedOptions?: Array<{
       optionId: string
@@ -68,6 +71,7 @@ export async function POST(request: Request) {
       name: item.name,
       quantity: Math.max(1, Number(item.quantity) || 1),
       unitAmount: Math.max(0, Number(item.unitAmount) || 0),
+      categoria_id: item.categoria_id ?? null,
       observation: (item.observation ?? '').trim(),
       selectedOptions: (item.selectedOptions ?? []).map((opt) => ({
         optionId: String(opt.optionId),
@@ -79,19 +83,58 @@ export async function POST(request: Request) {
       })),
     }))
 
-    const total = safeItems.reduce(
+    const subtotalBruto = safeItems.reduce(
       (acc, item) => acc + item.quantity * item.unitAmount,
       0
     )
 
-    if (total <= 0 || safeItems.length === 0) {
+    if (subtotalBruto <= 0 || safeItems.length === 0) {
       return NextResponse.json(
         { error: 'Carrinho invalido para checkout.' },
         { status: 400 }
       )
     }
 
+    const promo = await computePromotionForOrderCart(
+      safeItems.map((i) => ({
+        id: i.id,
+        quantity: i.quantity,
+        unitAmount: i.unitAmount,
+        categoria_id: i.categoria_id,
+      })),
+      body.promoCode ?? null
+    )
+
+    const payable = promo.totalPayable
+    if (payable <= 0 || payable > subtotalBruto + 0.01) {
+      return NextResponse.json(
+        { error: 'Valor do pedido invalido apos promocoes.' },
+        { status: 400 }
+      )
+    }
+
     const accessToken = await getPayPalAccessToken()
+    const itemTotalStr = promo.subtotal.toFixed(2)
+    const discountStr = promo.discountAmount.toFixed(2)
+    const amountBreakdown =
+      promo.discountAmount > 0.001
+        ? {
+            item_total: {
+              currency_code: 'USD',
+              value: itemTotalStr,
+            },
+            discount: {
+              currency_code: 'USD',
+              value: discountStr,
+            },
+          }
+        : {
+            item_total: {
+              currency_code: 'USD',
+              value: itemTotalStr,
+            },
+          }
+
     const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
@@ -104,13 +147,8 @@ export async function POST(request: Request) {
           {
             amount: {
               currency_code: 'USD',
-              value: total.toFixed(2),
-              breakdown: {
-                item_total: {
-                  currency_code: 'USD',
-                  value: total.toFixed(2),
-                },
-              },
+              value: payable.toFixed(2),
+              breakdown: amountBreakdown,
             },
             items: safeItems.map((item) => ({
               name: item.name,

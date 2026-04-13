@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useLang } from '@/lib/lang-context'
 import { ProfileAuthModal } from '@/components/profile-auth-modal'
+import { LogoLoadingScreen } from '@/components/logo-loading-screen'
 
 export default function PerfilPage() {
   const { t } = useLang()
@@ -60,6 +61,10 @@ export default function PerfilPage() {
     router.refresh()
   }
 
+  if (loading) {
+    return <LogoLoadingScreen message={t.loadingProfile} />
+  }
+
   return (
     <main className="mx-auto min-h-screen max-w-lg bg-background pb-28">
       <header className="border-b border-border/80 bg-card/85 px-4 pb-6 pt-[max(0.875rem,env(safe-area-inset-top))] backdrop-blur-xl">
@@ -67,9 +72,7 @@ export default function PerfilPage() {
       </header>
 
       <div className="mb-6 px-4 pt-6">
-        {loading ? (
-          <div className="h-24 animate-pulse rounded-xl bg-muted" aria-hidden />
-        ) : userId ? (
+        {userId ? (
           <div className="rounded-xl border border-border/80 bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="flex items-start gap-4">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5">

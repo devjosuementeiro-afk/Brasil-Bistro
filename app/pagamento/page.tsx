@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCart } from '@/lib/cart-context'
+import { useCart, type SelectedOption } from '@/lib/cart-context'
 import { useLang } from '@/lib/lang-context'
+import { formatPromotionHints } from '@/lib/promo-hint-format'
 import {
   loadCheckoutCustomer,
   isValidCheckoutCustomer,
@@ -49,10 +50,36 @@ declare global {
   }
 }
 
+function formatPaymentOptionLine(o: SelectedOption, currency: string): string {
+  const label =
+    o.groupType === 'extra' && o.groupName ? `${o.groupName}: ${o.label}` : o.label
+  if (o.priceDelta != null && Math.abs(o.priceDelta) > 0.0001) {
+    const sign = o.priceDelta > 0 ? '+' : ''
+    return `${label} (${sign}${currency}${o.priceDelta.toFixed(2)})`
+  }
+  return label
+}
+
 export default function PagamentoPage() {
   const router = useRouter()
-  const { items, totalPrice, totalItems, clearCart } = useCart()
-  const { t } = useLang()
+  const {
+    items,
+    totalItems,
+    clearCart,
+    promoCode,
+    setPromoCode,
+    promotionResult,
+    promotionLoading,
+    promotionError,
+    subtotalBeforePromo,
+    totalWithPromotion,
+  } = useCart()
+  const { t, lang } = useLang()
+  const [promoDraft, setPromoDraft] = useState(promoCode)
+
+  useEffect(() => {
+    setPromoDraft(promoCode)
+  }, [promoCode])
   const [checkoutCustomer, setCheckoutCustomer] = useState<CheckoutCustomer | null>(null)
   const [customerChecked, setCustomerChecked] = useState(false)
   const [sdkLoaded, setSdkLoaded] = useState(false)
@@ -60,7 +87,7 @@ export default function PagamentoPage() {
   const [resultMessage, setResultMessage] = useState('')
   const [cardFieldsEligible, setCardFieldsEligible] = useState(false)
   const [cardFieldsLoading, setCardFieldsLoading] = useState(false)
-  const [method, setMethod] = useState<'paypal' | 'card'>('paypal')
+  const [method, setMethod] = useState<'paypal' | 'card'>('card')
   const [salvarCartaoEstePedido, setSalvarCartaoEstePedido] = useState(false)
   const [successOrderNumber, setSuccessOrderNumber] = useState<string | null>(null)
   const isRenderingRef = useRef(false)
@@ -89,9 +116,14 @@ export default function PagamentoPage() {
       currency: 'USD',
       intent: 'capture',
       components: 'buttons,card-fields',
+      locale: lang === 'pt' ? 'pt_BR' : 'en_US',
     })
     return `${base}?${query.toString()}`
-  }, [hasValidPayPalClientId, paypalClientId, paypalEnv])
+  }, [hasValidPayPalClientId, paypalClientId, paypalEnv, lang])
+
+  useEffect(() => {
+    setSdkLoaded(false)
+  }, [lang])
 
   useEffect(() => {
     const c = loadCheckoutCustomer()
@@ -128,11 +160,13 @@ export default function PagamentoPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: customerPayload(),
+        promoCode: promoCode.trim() || null,
         cart: items.map(({ item, quantity, observation, unitPrice, selectedOptions }) => ({
           id: item.id,
           name: item.nome,
           quantity,
           unitAmount: unitPrice,
+          categoria_id: item.categoria_id,
           observation,
           selectedOptions,
         })),
@@ -151,11 +185,13 @@ export default function PagamentoPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: customerPayload(),
+        promoCode: promoCode.trim() || null,
         cart: items.map(({ item, quantity, observation, unitPrice, selectedOptions }) => ({
           id: item.id,
           name: item.nome,
           quantity,
           unitAmount: unitPrice,
+          categoria_id: item.categoria_id,
           observation,
           selectedOptions,
         })),
@@ -286,7 +322,17 @@ export default function PagamentoPage() {
       .finally(() => {
         isRenderingRef.current = false
       })
-  }, [sdkLoaded, items, clearCart, hasValidPayPalClientId, customerChecked, checkoutCustomer])
+  }, [
+    sdkLoaded,
+    items,
+    clearCart,
+    hasValidPayPalClientId,
+    customerChecked,
+    checkoutCustomer,
+    lang,
+    promoCode,
+    totalWithPromotion,
+  ])
 
   async function handleCardPayment() {
     if (!cardFieldsRef.current) return
@@ -304,7 +350,7 @@ export default function PagamentoPage() {
   if (!customerChecked || !checkoutCustomer) {
     return (
       <main className="mx-auto min-h-screen max-w-lg bg-background px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <p className="text-sm text-muted-foreground">Carregando checkout...</p>
+        <p className="text-sm text-muted-foreground">{t.paymentCheckoutLoading}</p>
       </main>
     )
   }
@@ -318,17 +364,17 @@ export default function PagamentoPage() {
             ✓
           </div>
         </div>
-        <h1 className="text-2xl font-extrabold text-foreground">Pagamento confirmado</h1>
-        <p className="text-sm text-muted-foreground mt-2">Sua ordem foi gerada com sucesso.</p>
+        <h1 className="text-2xl font-extrabold text-foreground">{t.paymentConfirmedTitle}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t.paymentConfirmedSubtitle}</p>
         <div className="mt-6 w-full max-w-xs rounded-2xl border border-border bg-card px-5 py-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Numero da ordem</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{t.paymentOrderNumberLabel}</p>
           <p className="mt-1 text-2xl font-bold text-accent">#{successOrderNumber}</p>
         </div>
         <Link
           href="/"
           className="mt-6 w-full max-w-xs rounded-2xl bg-primary py-3.5 text-sm font-bold text-primary-foreground"
         >
-          Voltar ao cardapio
+          {t.paymentBackToMenu}
         </Link>
       </main>
     )
@@ -338,9 +384,9 @@ export default function PagamentoPage() {
     return (
       <main className="min-h-screen bg-background max-w-lg mx-auto px-4 pt-10">
         <Link href="/carrinho" className="text-sm font-semibold text-accent">
-          Voltar ao carrinho
+          {t.paymentBackToCart}
         </Link>
-        <p className="mt-4 text-sm text-muted-foreground">Seu carrinho esta vazio.</p>
+        <p className="mt-4 text-sm text-muted-foreground">{t.paymentEmptyCart}</p>
       </main>
     )
   }
@@ -348,7 +394,12 @@ export default function PagamentoPage() {
   return (
     <main className="mx-auto min-h-screen max-w-lg bg-background pb-28">
       {!!paypalScriptSrc && (
-        <Script src={paypalScriptSrc} strategy="afterInteractive" onLoad={() => setSdkLoaded(true)} />
+        <Script
+          key={`paypal-sdk-${lang}`}
+          src={paypalScriptSrc}
+          strategy="afterInteractive"
+          onLoad={() => setSdkLoaded(true)}
+        />
       )}
 
       <header className="sticky top-0 z-40 border-b border-border/90 bg-background/90 px-4 pb-3 backdrop-blur-md pt-[max(0.75rem,env(safe-area-inset-top))]">
@@ -356,11 +407,11 @@ export default function PagamentoPage() {
           <Link
             href="/checkout/dados"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card shadow-sm transition-colors active:bg-secondary"
-            aria-label="Back"
+            aria-label={t.paymentHeaderBackAria}
           >
             <ArrowLeft size={18} />
           </Link>
-          <h1 className="text-base font-bold text-foreground">Payment</h1>
+          <h1 className="text-base font-bold text-foreground">{t.paymentTitle}</h1>
         </div>
       </header>
 
@@ -370,26 +421,144 @@ export default function PagamentoPage() {
           <p>{checkoutCustomer.email}</p>
           <p>{checkoutCustomer.telefone}</p>
           <Link href="/checkout/dados" className="inline-block pt-1 font-medium text-accent">
-            Editar dados
+            {t.paymentEditDetails}
           </Link>
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{totalItems} {totalItems === 1 ? t.item : t.items}</span>
-            <span>{t.currency}{totalPrice.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between font-bold text-xl mt-1">
-            <span>{t.total}</span>
-            <span className="text-accent">
-              {t.currency}
-              {totalPrice.toFixed(2)}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {t.paymentOrderSummary}
+          </p>
+          {promotionResult && promotionResult.discountAmount > 0 && (
+            <p className="mt-2 rounded-xl border border-primary/30 bg-primary/8 px-3 py-2 text-[11px] leading-snug text-foreground">
+              {t.cartPromoStoreOff}
+              {promotionResult.breakdown.length > 0
+                ? ` (${promotionResult.breakdown.map((b) => b.label).join(', ')})`
+                : ''}
+            </p>
+          )}
+          {promotionResult &&
+            promotionResult.discountAmount <= 0 &&
+            formatPromotionHints(promotionResult.hints, lang, t.currency).map((line) => (
+              <p key={line} className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                {line}
+              </p>
+            ))}
+          {promotionResult?.codeInvalid && promoCode.trim() ? (
+            <p className="mt-2 text-[11px] text-destructive">{t.cartPromoInvalid}</p>
+          ) : null}
+          {promotionError ? <p className="mt-2 text-[11px] text-destructive">{promotionError}</p> : null}
+          <ul className="mt-3 divide-y divide-border/70 border-t border-border/70 pt-3">
+            {items.map(
+              ({
+                cartItemId,
+                item,
+                quantity,
+                unitPrice,
+                totalPrice: lineTotal,
+                observation,
+                selectedOptions,
+              }) => (
+                <li key={cartItemId} className="py-3 first:pt-0">
+                  <p className="font-serif text-sm font-semibold leading-snug text-foreground">{item.nome}</p>
+                  {selectedOptions.length > 0 && (
+                    <ul className="mt-2 space-y-1 border-l-2 border-primary/20 pl-2.5">
+                      {selectedOptions.map((opt) => (
+                        <li key={`${cartItemId}-${opt.optionId}`} className="text-[11px] leading-snug text-muted-foreground">
+                          {formatPaymentOptionLine(opt, t.currency)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {observation.trim() ? (
+                    <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                      <span className="font-medium text-foreground/80">{t.paymentObsLabel}</span> {observation.trim()}
+                    </p>
+                  ) : null}
+                  <div className="mt-2.5 flex items-baseline justify-between gap-3 tabular-nums">
+                    <span className="text-[11px] text-muted-foreground">
+                      {quantity} × {t.currency}
+                      {unitPrice.toFixed(2)}
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {t.currency}
+                      {lineTotal.toFixed(2)}
+                    </span>
+                  </div>
+                </li>
+              )
+            )}
+          </ul>
+          <div className="mt-3 flex justify-between border-t border-border/80 pt-3 text-xs text-muted-foreground">
+            <span>
+              {totalItems} {totalItems === 1 ? t.item : t.items}
             </span>
+            {promotionLoading ? <span className="opacity-60">…</span> : null}
+          </div>
+          <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+            <span>{t.paymentSubtotal}</span>
+            <span className="tabular-nums">
+              {t.currency}
+              {subtotalBeforePromo.toFixed(2)}
+            </span>
+          </div>
+          {promotionResult && promotionResult.discountAmount > 0 ? (
+            <div className="flex justify-between text-xs font-medium text-primary">
+              <span>{t.paymentDiscount}</span>
+              <span className="tabular-nums">
+                −{t.currency}
+                {promotionResult.discountAmount.toFixed(2)}
+              </span>
+            </div>
+          ) : null}
+          <div className="flex justify-between pt-1 font-bold text-xl">
+            <span>{t.total}</span>
+            <span className="text-accent tabular-nums">
+              {t.currency}
+              {totalWithPromotion.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
+          <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {t.paymentPromoCodeLabel}
+          </label>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="text"
+              value={promoDraft}
+              onChange={(e) => setPromoDraft(e.target.value)}
+              className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              autoCapitalize="characters"
+              autoCorrect="off"
+            />
+            <button
+              type="button"
+              onClick={() => setPromoCode(promoDraft.trim())}
+              className="shrink-0 rounded-xl bg-secondary px-3 py-2 text-xs font-semibold text-secondary-foreground"
+            >
+              {t.cartPromoApply}
+            </button>
           </div>
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMethod('card')}
+              className={`h-11 rounded-2xl text-sm font-semibold transition-colors ${
+                method === 'card'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground'
+              }`}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <CreditCard size={14} />
+                {t.paymentMethodCard}
+              </span>
+            </button>
             <button
               type="button"
               onClick={() => setMethod('paypal')}
@@ -401,67 +570,52 @@ export default function PagamentoPage() {
             >
               <span className="inline-flex items-center gap-1.5">
                 <Wallet size={14} />
-                PayPal
+                {t.paymentMethodPayPal}
               </span>
             </button>
+          </div>
+        </div>
+
+        <div className={`${method === 'card' ? '' : 'hidden'} space-y-2 rounded-3xl border border-border bg-card p-3 shadow-sm`}>
+          {!sdkLoaded && (
+            <p className="py-6 text-center text-sm text-muted-foreground">{t.paymentCardLoading}</p>
+          )}
+          {sdkLoaded && !cardFieldsEligible && (
+            <p className="py-4 text-center text-sm leading-snug text-muted-foreground">{t.paymentCardUnavailable}</p>
+          )}
+          <div className={cardFieldsEligible ? 'space-y-2' : 'hidden'}>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t.paymentCardDetailsTitle}</p>
+            <p className="text-[11px] leading-snug text-muted-foreground">{t.paymentCardIntro}</p>
+            <div id="card-name-field" className="min-h-12 overflow-hidden rounded-xl bg-transparent" />
+            <div id="card-number-field" className="min-h-12 overflow-hidden rounded-xl bg-transparent" />
+            <div className="grid grid-cols-2 gap-2">
+              <div id="card-expiry-field" className="min-h-12 overflow-hidden rounded-xl bg-transparent" />
+              <div id="card-cvv-field" className="min-h-12 overflow-hidden rounded-xl bg-transparent" />
+            </div>
+            <label className="flex cursor-pointer items-start gap-2.5 pt-1 text-[11px] leading-snug text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={salvarCartaoEstePedido}
+                onChange={(e) => setSalvarCartaoEstePedido(e.target.checked)}
+                className="mt-0.5 shrink-0 rounded border-border"
+              />
+              <span>{t.paymentSaveCardCheckbox}</span>
+            </label>
             <button
               type="button"
-              onClick={() => setMethod('card')}
-              disabled={!cardFieldsEligible}
-              className={`h-11 rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40 ${
-                method === 'card'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground'
-              }`}
+              onClick={handleCardPayment}
+              disabled={cardFieldsLoading}
+              className="mt-1 w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-sm disabled:opacity-60"
             >
-              <span className="inline-flex items-center gap-1.5">
-                <CreditCard size={14} />
-                Card
-              </span>
+              {cardFieldsLoading ? t.paymentProcessing : t.paymentPayConfirm}
             </button>
           </div>
         </div>
 
         <div className={`${method === 'paypal' ? '' : 'hidden'} rounded-3xl border border-border bg-card p-4 shadow-sm`}>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Pay securely with PayPal</p>
-          <p className="text-[11px] text-muted-foreground leading-snug mb-3">
-            Pagamento com a carteira PayPal não usa a opção de salvar cartão digitado. O cartão ainda não fica armazenado
-            em nossos servidores.
-          </p>
+          <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">{t.paymentPaypalSecureTitle}</p>
+          <p className="mb-3 text-[11px] leading-snug text-muted-foreground">{t.paymentPaypalIntro}</p>
           <div id="paypal-button-container" />
-        </div>
-
-        <div
-          className={`${method === 'card' && cardFieldsEligible ? '' : 'hidden'} space-y-2 rounded-3xl border border-border bg-card p-3 shadow-sm`}
-        >
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Card details</p>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            Os dados do cartão são processados pelo PayPal. Ainda não armazenamos o cartão: abaixo você só registra se
-            deseja salvar para compras futuras quando ativarmos o vault.
-          </p>
-          <div id="card-name-field" className="rounded-xl bg-transparent min-h-12 overflow-hidden" />
-          <div id="card-number-field" className="rounded-xl bg-transparent min-h-12 overflow-hidden" />
-          <div className="grid grid-cols-2 gap-2">
-            <div id="card-expiry-field" className="rounded-xl bg-transparent min-h-12 overflow-hidden" />
-            <div id="card-cvv-field" className="rounded-xl bg-transparent min-h-12 overflow-hidden" />
-          </div>
-          <label className="flex gap-2.5 items-start text-[11px] text-muted-foreground cursor-pointer leading-snug pt-1">
-            <input
-              type="checkbox"
-              checked={salvarCartaoEstePedido}
-              onChange={(e) => setSalvarCartaoEstePedido(e.target.checked)}
-              className="mt-0.5 rounded border-border shrink-0"
-            />
-            <span>Salvar este cartão para próximas compras (confirmo minha intenção neste pagamento).</span>
-          </label>
-          <button
-            type="button"
-            onClick={handleCardPayment}
-            disabled={cardFieldsLoading}
-            className="mt-1 w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-sm disabled:opacity-60"
-          >
-            {cardFieldsLoading ? 'Processing...' : 'Pay & Confirm'}
-          </button>
         </div>
 
         {paypalError && <p className="text-xs text-red-500">{paypalError}</p>}

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useCart, type ItemCardapio } from '@/lib/cart-context'
 import { useLang } from '@/lib/lang-context'
 import { cn } from '@/lib/utils'
+import { LogoLoadingScreen } from '@/components/logo-loading-screen'
 
 interface ItemComCategoria extends ItemCardapio {
   disponivel: boolean
@@ -87,11 +88,7 @@ export default function BuscaPage() {
 
       <div className="px-4 pt-4">
         {loading ? (
-          <div className="space-y-3" aria-busy="true">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-[88px] animate-pulse rounded-xl bg-muted" />
-            ))}
-          </div>
+          <LogoLoadingScreen variant="contained" message={t.loadingSearch} className="min-h-[min(420px,70vh)]" />
         ) : itens.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-card/80 px-6 py-14 text-center shadow-[var(--shadow-card)]">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl border border-border/60 bg-muted/80">
