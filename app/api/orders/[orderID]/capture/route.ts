@@ -102,15 +102,64 @@ export async function POST(
       }
     )
 
-    const data = await response.json()
+    const data = (await response.json()) as Record<string, unknown> & {
+      status?: string
+      purchase_units?: Array<{
+        amount?: { currency_code?: string; value?: string }
+        payments?: {
+          captures?: Array<{
+            status?: string
+            id?: string
+            amount?: { value?: string; currency_code?: string }
+            seller_receivable_breakdown?: {
+              gross_amount?: { value?: number }
+              paypal_fee?: { value?: number }
+              net_amount?: { value?: number }
+            }
+          }>
+          authorizations?: Array<{ status?: string; id?: string }>
+        }
+      }>
+      details?: unknown
+      debug_id?: string
+      message?: string
+    }
     if (!response.ok) {
       return NextResponse.json(data, { status: response.status })
     }
 
+    const orderStatus = String(data?.status ?? '')
     const capture =
       data?.purchase_units?.[0]?.payments?.captures?.[0] ??
       data?.purchase_units?.[0]?.payments?.authorizations?.[0]
     const captureStatus = String(capture?.status ?? '')
+
+    // HTTP 201/200 não garante pagamento aprovado — cartão recusado pode vir com status != COMPLETED.
+    if (orderStatus && orderStatus !== 'COMPLETED') {
+      return NextResponse.json(
+        {
+          error: 'Pedido PayPal nao foi concluido.',
+          order_status: orderStatus,
+          details: data?.details ?? null,
+          debug_id: data?.debug_id ?? null,
+          message: data?.message,
+        },
+        { status: 422 }
+      )
+    }
+
+    if (captureStatus !== 'COMPLETED' || !capture?.id) {
+      return NextResponse.json(
+        {
+          error: 'Pagamento nao capturado com sucesso.',
+          capture_status: captureStatus || 'AUSENTE',
+          details: data?.details ?? null,
+          debug_id: data?.debug_id ?? null,
+          message: data?.message,
+        },
+        { status: 422 }
+      )
+    }
     const captureId = String(capture?.id ?? '')
     const currencyCode = String(
       capture?.amount?.currency_code ??
@@ -135,8 +184,7 @@ export async function POST(
 
     let localOrderId: string | null = null
 
-    // Só cria ordem local quando o pagamento realmente conclui.
-    if (captureStatus === 'COMPLETED') {
+    {
       const supabase = createAdminClient()
 
       const { data: existingOrder } = await supabase

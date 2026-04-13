@@ -197,18 +197,41 @@ export default function PagamentoPage() {
         })),
       }),
     })
-    const captureData = await response.json()
+    const captureData = (await response.json()) as Record<string, unknown> & {
+      error?: string
+      message?: string
+      details?: Array<{ description?: string; issue?: string }>
+      debug_id?: string
+      status?: string
+      order_number?: string
+      local_order_id?: string
+      purchase_units?: Array<{
+        payments?: {
+          captures?: Array<{ status?: string; id?: string }>
+          authorizations?: Array<{ status?: string; id?: string }>
+        }
+      }>
+    }
     if (!response.ok) {
       const errorDetail = captureData?.details?.[0]
+      const detailText = [errorDetail?.description, errorDetail?.issue].filter(Boolean).join(' — ')
       throw new Error(
-        captureData?.error ??
-          (errorDetail ? `${errorDetail.description} (${captureData?.debug_id ?? ''})` : 'Falha ao finalizar pedido.')
+        (typeof captureData?.error === 'string' && captureData.error) ||
+          (typeof captureData?.message === 'string' && captureData.message) ||
+          (detailText
+            ? `${detailText}${captureData?.debug_id ? ` (${captureData.debug_id})` : ''}`
+            : 'Falha ao finalizar pedido.')
       )
     }
 
+    const orderStatus = String(captureData?.status ?? '')
     const transaction =
       captureData?.purchase_units?.[0]?.payments?.captures?.[0] ??
       captureData?.purchase_units?.[0]?.payments?.authorizations?.[0]
+    const txStatus = String(transaction?.status ?? '')
+    if ((orderStatus && orderStatus !== 'COMPLETED') || txStatus !== 'COMPLETED') {
+      throw new Error(t.paymentFailedNotCompleted)
+    }
 
     const orderNumber =
       (captureData?.order_number as string | undefined) ??
@@ -280,7 +303,26 @@ export default function PagamentoPage() {
     const cardFieldsInstance = window.paypal.CardFields({
       createOrder,
       async onApprove(data) {
-        await captureOrder(data.orderID)
+        try {
+          await captureOrder(data.orderID)
+        } catch (error) {
+          if (
+            typeof error === 'object' &&
+            error !== null &&
+            'message' in error &&
+            String((error as { message: string }).message).includes('INSTRUMENT_DECLINED')
+          ) {
+            setPaypalError(
+              lang === 'pt'
+                ? 'Cartão recusado. Tente outro cartão ou use PayPal.'
+                : 'Card declined. Try another card or use PayPal.'
+            )
+            return
+          }
+          setPaypalError(
+            error instanceof Error ? error.message : 'Nao foi possivel processar o pagamento.'
+          )
+        }
       },
       onError(error) {
         console.error(error)
