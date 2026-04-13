@@ -124,6 +124,8 @@ export const translations = {
     paymentCheckoutLoading: 'Loading checkout…',
     paymentConfirmedTitle: 'Payment confirmed',
     paymentConfirmedSubtitle: 'Your order was placed successfully.',
+    paymentFailedNotCompleted:
+      'Payment was not completed. Your card may have been declined—try another card or PayPal.',
     paymentOrderNumberLabel: 'Order number',
     paymentBackToMenu: 'Back to menu',
     paymentBackToCart: 'Back to cart',
@@ -348,6 +350,8 @@ export const translations = {
     paymentCheckoutLoading: 'Carregando checkout…',
     paymentConfirmedTitle: 'Pagamento confirmado',
     paymentConfirmedSubtitle: 'Sua ordem foi gerada com sucesso.',
+    paymentFailedNotCompleted:
+      'O pagamento não foi concluído. O cartão pode ter sido recusado—tente outro cartão ou PayPal.',
     paymentOrderNumberLabel: 'Número da ordem',
     paymentBackToMenu: 'Voltar ao cardápio',
     paymentBackToCart: 'Voltar ao carrinho',
