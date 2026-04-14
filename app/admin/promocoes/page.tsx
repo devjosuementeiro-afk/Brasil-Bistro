@@ -125,24 +125,82 @@ function PromoBannerUploader({
     setUploading(true)
 
     try {
-      const ext = file.name.split('.').pop() || 'jpg'
-      const nome = `promocoes/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      // Mantém o mesmo padrão do upload de itens (sem pasta), evitando bloqueio por policy de storage.
+      const nome = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const pathAttempt = nome
+
+      // Log de contexto para diagnóstico (não bloqueia o fluxo).
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      let bucketCheck:
+        | {
+            ok: boolean
+            bucketId?: string
+            public?: boolean
+            message?: string
+          }
+        | undefined
+      try {
+        const { data: bucketData, error: bucketErr } = await supabase.storage.getBucket(CARDAPIO_BUCKET)
+        if (bucketErr) {
+          bucketCheck = { ok: false, message: bucketErr.message }
+        } else {
+          bucketCheck = {
+            ok: true,
+            bucketId: bucketData?.id,
+            public: bucketData?.public,
+          }
+        }
+      } catch (bucketUnknownErr) {
+        bucketCheck = {
+          ok: false,
+          message:
+            bucketUnknownErr instanceof Error ? bucketUnknownErr.message : String(bucketUnknownErr),
+        }
+      }
 
       if (url) {
         const oldPath = pathFromPublicStorageUrl(url)
-        if (oldPath) await supabase.storage.from(CARDAPIO_BUCKET).remove([oldPath])
+        if (oldPath) {
+          await supabase.storage.from(CARDAPIO_BUCKET).remove([oldPath])
+        }
       }
 
       const { error: uploadError } = await supabase.storage
         .from(CARDAPIO_BUCKET)
         .upload(nome, file, { cacheControl: '3600', upsert: false })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('[PromoBannerUploader] Upload failed', {
+          bucket: CARDAPIO_BUCKET,
+          pathAttempt,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          userId: user?.id ?? null,
+          bucketCheck,
+          uploadErrorMessage: uploadError.message,
+          uploadErrorName: uploadError.name,
+          uploadError,
+        })
+        throw uploadError
+      }
 
       const { data } = supabase.storage.from(CARDAPIO_BUCKET).getPublicUrl(nome)
       onUrl(data.publicUrl)
-    } catch {
-      setErro(t.uploadError)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : ''
+      console.error('[PromoBannerUploader] Unexpected upload exception', {
+        bucket: CARDAPIO_BUCKET,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        errorMessage: message,
+        error: e,
+      })
+      setErro(message ? `${t.uploadError} (${message})` : t.uploadError)
       setPreview(url)
     } finally {
       setUploading(false)
@@ -223,7 +281,7 @@ function PromoBannerUploader({
   )
 }
 
-export default function AdminPromocoesPage() {
+export function AdminPromocoesPanel({ embedded = false }: { embedded?: boolean }) {
   const supabase = createClient()
   const { t } = useLang()
   const [loading, setLoading] = useState(true)
@@ -609,6 +667,9 @@ export default function AdminPromocoesPage() {
   }
 
   if (loading) {
+    if (embedded) {
+      return <p className="text-sm text-muted-foreground">{t.loadingAdmin}</p>
+    }
     return (
       <main className="min-h-screen bg-background">
         <LogoLoadingScreen variant="fullscreen" message={t.loadingAdmin} />
@@ -616,42 +677,21 @@ export default function AdminPromocoesPage() {
     )
   }
 
-  return (
-    <main className="min-h-screen bg-[#F6F7FA]">
-      <header className="sticky top-0 z-40 border-b border-border bg-white px-4 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <div className="mx-auto flex max-w-4xl flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/admin"
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary transition-colors hover:bg-secondary/80"
-                aria-label={t.promoBackAdmin}
-              >
-                <ArrowLeft size={18} />
-              </Link>
-              <div>
-                <p className="text-xs text-muted-foreground">{t.adminPanel}</p>
-                <h1 className="flex items-center gap-2 text-lg font-bold text-foreground">
-                  <Tag size={20} className="text-primary" />
-                  {t.promoPageTitle}
-                </h1>
-              </div>
-            </div>
-            <ChefHat size={20} className="shrink-0 text-primary" />
+  const content = (
+    <>
+      <div className={`${embedded ? '' : 'mx-auto max-w-4xl'} px-4 py-6`}>
+        {!embedded ? null : (
+          <div className="mb-4 flex justify-end">
+            <button
+              type="button"
+              onClick={abrirNovo}
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"
+            >
+              <Plus size={16} className="mr-1 inline" />
+              {t.promoAdd}
+            </button>
           </div>
-          <p className="text-sm text-muted-foreground">{t.promoPageSubtitle}</p>
-          <button
-            type="button"
-            onClick={abrirNovo}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-sm sm:w-auto sm:self-start sm:px-5"
-          >
-            <Plus size={18} />
-            {t.promoAdd}
-          </button>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-4xl px-4 py-6">
+        )}
         <div className="mb-4 rounded-2xl border border-border bg-white p-4 shadow-sm">
           <p className="text-sm font-semibold text-foreground">{t.promoDeliveryFeeTitle}</p>
           <p className="mt-1 text-xs text-muted-foreground">{t.promoDeliveryFeeHint}</p>
@@ -1063,6 +1103,50 @@ export default function AdminPromocoesPage() {
           </div>
         </div>
       )}
+    </>
+  )
+
+  if (embedded) return content
+
+  return (
+    <main className="min-h-screen bg-[#F6F7FA]">
+      <header className="sticky top-0 z-40 border-b border-border bg-white px-4 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <div className="mx-auto flex max-w-4xl flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/admin"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary transition-colors hover:bg-secondary/80"
+                aria-label={t.promoBackAdmin}
+              >
+                <ArrowLeft size={18} />
+              </Link>
+              <div>
+                <p className="text-xs text-muted-foreground">{t.adminPanel}</p>
+                <h1 className="flex items-center gap-2 text-lg font-bold text-foreground">
+                  <Tag size={20} className="text-primary" />
+                  {t.promoPageTitle}
+                </h1>
+              </div>
+            </div>
+            <ChefHat size={20} className="shrink-0 text-primary" />
+          </div>
+          <p className="text-sm text-muted-foreground">{t.promoPageSubtitle}</p>
+          <button
+            type="button"
+            onClick={abrirNovo}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-sm sm:w-auto sm:self-start sm:px-5"
+          >
+            <Plus size={18} />
+            {t.promoAdd}
+          </button>
+        </div>
+      </header>
+      {content}
     </main>
   )
+}
+
+export default function AdminPromocoesPage() {
+  return <AdminPromocoesPanel />
 }

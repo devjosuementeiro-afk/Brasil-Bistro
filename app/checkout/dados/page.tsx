@@ -9,6 +9,7 @@ import { ArrowLeft, Phone, User, Mail, LogOut } from 'lucide-react'
 import {
   isValidCheckoutCustomer,
   loadCheckoutCustomer,
+  loadFulfillmentPreference,
   normalizePhone,
   saveCheckoutCustomer,
   type FulfillmentType,
@@ -41,6 +42,8 @@ export default function CheckoutDadosPage() {
       data: { user },
     } = await supabase.auth.getUser()
 
+    const preferredFulfillment = loadFulfillmentPreference()
+
     if (!user) {
       setUserId(null)
       setAceitaEmail(false)
@@ -50,12 +53,12 @@ export default function CheckoutDadosPage() {
         setNome(saved.nome)
         setEmail(saved.email)
         setTelefone(saved.telefone)
-        setFulfillmentType(saved.fulfillmentType)
+        setFulfillmentType(preferredFulfillment ?? saved.fulfillmentType)
         setEnderecoEntrega(saved.enderecoEntrega)
         setAceitaSms(saved.aceitaSmsAtualizacoes)
       } else {
         setAceitaSms(false)
-        setFulfillmentType('take_out')
+        setFulfillmentType(preferredFulfillment ?? 'take_out')
         setEnderecoEntrega('')
       }
       setLoading(false)
@@ -81,7 +84,8 @@ export default function CheckoutDadosPage() {
     const aceitaEmailVal = !!perfil?.aceita_email_atualizacoes_pedido
     const prefereVal = !!perfil?.prefere_salvar_cartao_futuro
     const enderecoEntregaVal = String(perfil?.endereco_entrega ?? '').trim()
-    const fulfillmentVal: FulfillmentType = enderecoEntregaVal ? 'delivery' : 'take_out'
+    const fulfillmentVal: FulfillmentType =
+      preferredFulfillment ?? (enderecoEntregaVal ? 'delivery' : 'take_out')
 
     setNome(nomeVal)
     setTelefone(telefoneVal)
@@ -101,28 +105,6 @@ export default function CheckoutDadosPage() {
       aceitaSmsAtualizacoes: aceitaSmsVal,
       aceitaEmailAtualizacoes: aceitaEmailVal,
       prefereSalvarCartao: prefereVal,
-    }
-
-    if (isValidCheckoutCustomer(c)) {
-      const { error: upErr } = await supabase.from('cliente_perfis').upsert(
-        {
-          user_id: user.id,
-          nome_completo: c.nome.trim(),
-          telefone: c.telefone,
-          aceita_sms_atualizacoes_pedido: aceitaSmsVal,
-          aceita_email_atualizacoes_pedido: aceitaEmailVal,
-          prefere_salvar_cartao_futuro: prefereVal,
-        },
-        { onConflict: 'user_id' }
-      )
-      if (upErr) {
-        setErro(upErr.message)
-        setLoading(false)
-        return
-      }
-      saveCheckoutCustomer(c)
-      router.replace('/pagamento')
-      return
     }
 
     setLoading(false)
@@ -217,7 +199,7 @@ export default function CheckoutDadosPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-lg bg-background">
+      <main className="mx-auto w-full max-w-[1180px] bg-background md:px-6">
         <LogoLoadingScreen variant="fullscreen" message={t.checkoutLoading} />
       </main>
     )
@@ -226,8 +208,8 @@ export default function CheckoutDadosPage() {
   const isGuest = !userId
 
   return (
-    <main className="mx-auto min-h-screen max-w-lg bg-background pb-28">
-      <header className="sticky top-0 z-40 border-b border-border/90 bg-background/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
+    <main className="mx-auto min-h-screen w-full max-w-[1180px] bg-background pb-28 md:px-6 md:pb-10">
+      <header className="sticky top-0 z-40 border-b border-border/90 bg-background/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md md:px-0">
         <div className="flex items-center gap-3">
           <Link
             href="/carrinho"
@@ -240,7 +222,8 @@ export default function CheckoutDadosPage() {
         </div>
       </header>
 
-      <section className="space-y-4 px-4 pt-5">
+      <section className="space-y-4 px-4 pt-5 md:px-0">
+        <div className="md:mx-auto md:max-w-[860px]">
         <p className="text-sm text-muted-foreground">{t.checkoutIntro}</p>
 
         {userId ? (
@@ -281,10 +264,6 @@ export default function CheckoutDadosPage() {
               {t.checkoutGuestContactTitle}
             </p>
           )}
-          {fulfillmentType === 'delivery' && userId && enderecoEntrega.trim().length >= 6 && (
-            <p className="text-[11px] text-muted-foreground">{t.checkoutDeliveryAddressSaved}</p>
-          )}
-
           <div>
             <label htmlFor="nome" className="mb-1 block text-xs font-semibold">
               {t.profileFullName}
@@ -372,23 +351,17 @@ export default function CheckoutDadosPage() {
                 <label htmlFor="endereco-entrega" className="mb-1 block text-xs font-semibold">
                   {t.checkoutDeliveryAddressLabel}
                 </label>
-                {userId && enderecoEntrega.trim().length >= 6 ? (
-                  <p className="rounded-2xl border border-border bg-background px-3 py-2.5 text-sm">
-                    {enderecoEntrega.trim()}
-                  </p>
-                ) : (
-                  <textarea
-                    id="endereco-entrega"
-                    value={enderecoEntrega}
-                    onChange={(e) => setEnderecoEntrega(e.target.value)}
-                    required
-                    minLength={6}
-                    autoComplete="street-address"
-                    rows={3}
-                    className="w-full rounded-2xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder={t.checkoutDeliveryAddressPlaceholder}
-                  />
-                )}
+                <textarea
+                  id="endereco-entrega"
+                  value={enderecoEntrega}
+                  onChange={(e) => setEnderecoEntrega(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete="street-address"
+                  rows={3}
+                  className="w-full rounded-2xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder={t.checkoutDeliveryAddressPlaceholder}
+                />
               </div>
             ) : (
               <p className="text-[11px] text-muted-foreground">{t.checkoutTakeOutHint}</p>
@@ -428,6 +401,7 @@ export default function CheckoutDadosPage() {
             {saving ? t.checkoutSaving : t.checkoutContinue}
           </button>
         </form>
+        </div>
       </section>
     </main>
   )

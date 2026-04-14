@@ -1,4 +1,5 @@
 export const CHECKOUT_STORAGE_KEY = 'nmfc-checkout-v1'
+export const CHECKOUT_FULFILLMENT_PREF_KEY = 'nmfc-checkout-fulfillment-pref-v1'
 
 export type FulfillmentType = 'take_out' | 'delivery'
 
@@ -70,6 +71,18 @@ export function saveCheckoutCustomer(c: CheckoutCustomer): void {
 export function clearCheckoutCustomer(): void {
   if (typeof window === 'undefined') return
   sessionStorage.removeItem(CHECKOUT_STORAGE_KEY)
+}
+
+export function saveFulfillmentPreference(value: FulfillmentType): void {
+  if (typeof window === 'undefined') return
+  sessionStorage.setItem(CHECKOUT_FULFILLMENT_PREF_KEY, value)
+}
+
+export function loadFulfillmentPreference(): FulfillmentType | null {
+  if (typeof window === 'undefined') return null
+  const raw = sessionStorage.getItem(CHECKOUT_FULFILLMENT_PREF_KEY)
+  if (raw === 'take_out' || raw === 'delivery') return raw
+  return null
 }
 
 export type CustomerPayload = {

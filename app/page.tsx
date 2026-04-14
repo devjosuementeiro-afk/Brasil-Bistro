@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ShoppingBag, Star, Plus, Minus, Inbox, UtensilsCrossed } from 'lucide-react'
+import { ShoppingBag, Star, Plus, Minus, Inbox, UtensilsCrossed, SlidersHorizontal, Check } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -42,6 +42,7 @@ export default function MenuPage() {
   const [itens, setItens] = useState<ItemComCategoria[]>([])
   const [combos, setCombos] = useState<ComboHome[]>([])
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('todas')
+  const [filtroAberto, setFiltroAberto] = useState(false)
   const [loading, setLoading] = useState(true)
   const { totalItems, items, addItem, updateQuantity } = useCart()
   const { t } = useLang()
@@ -148,6 +149,10 @@ export default function MenuPage() {
   )
 
   const destaques = itensFiltrados.filter((i) => i.destaque)
+  const categoriaAtualNome =
+    categoriaSelecionada === 'todas'
+      ? t.all
+      : categorias.find((cat) => cat.id === categoriaSelecionada)?.nome ?? t.all
 
   const destaquesOrdenados = useMemo(() => {
     const ordemCat = new Map(categorias.map((c) => [c.id, c.ordem]))
@@ -172,7 +177,7 @@ export default function MenuPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-lg bg-background pb-28">
+    <main className="mx-auto min-h-screen w-full max-w-[1180px] bg-background pb-28 md:px-6 md:pb-10">
       <header className="sticky top-0 z-40 border-b border-border/80 bg-card/80 shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur-xl">
         <div className="space-y-4 px-4 pb-4 pt-[max(0.875rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-4">
@@ -205,51 +210,42 @@ export default function MenuPage() {
           </div>
         </div>
 
-        {categorias.length > 0 && (
-          <div
-            className="flex snap-x snap-mandatory gap-2 overflow-x-auto scrollbar-hide px-4 pb-4 pt-0"
-            role="tablist"
-            aria-label="Categorias"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={categoriaSelecionada === 'todas'}
-              onClick={() => setCategoriaSelecionada('todas')}
-              className={cn(
-                'shrink-0 snap-start rounded-xl px-4 py-2.5 text-[13px] font-semibold tracking-tight transition-all',
-                categoriaSelecionada === 'todas'
-                  ? 'bg-primary text-primary-foreground shadow-md'
-                  : 'border border-border/80 bg-card text-foreground shadow-sm active:bg-muted'
-              )}
-            >
-              {t.all}
-            </button>
-            {categorias.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                role="tab"
-                aria-selected={categoriaSelecionada === cat.id}
-                onClick={() => setCategoriaSelecionada(cat.id)}
-                className={cn(
-                  'flex shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-[13px] font-semibold tracking-tight transition-all',
-                  categoriaSelecionada === cat.id
-                    ? 'bg-primary text-primary-foreground shadow-md'
-                    : 'border border-border/80 bg-card text-foreground shadow-sm active:bg-muted'
-                )}
-              >
-                {cat.icone && <span className="text-base leading-none opacity-80">{cat.icone}</span>}
-                {cat.nome}
-              </button>
-            ))}
-          </div>
-        )}
       </header>
 
       <HomePromoCarousel />
 
-      <div className="px-4 pt-6">
+      <div className="px-4 pt-6 md:px-0">
+        {categorias.length > 0 && (
+          <section className="mb-5 hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm md:block">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Filtro atual
+                </p>
+                <p className="text-sm font-semibold text-foreground">{categoriaAtualNome}</p>
+              </div>
+              <div className="w-full max-w-[320px]">
+                <label htmlFor="categoria-desktop" className="sr-only">
+                  Selecionar categoria
+                </label>
+                <select
+                  id="categoria-desktop"
+                  value={categoriaSelecionada}
+                  onChange={(event) => setCategoriaSelecionada(event.target.value)}
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background px-3 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="todas">{t.all}</option>
+                  {categorias.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icone ? `${cat.icone} ${cat.nome}` : cat.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </section>
+        )}
+
         {itensFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-card/80 px-6 py-16 text-center shadow-[var(--shadow-card)]">
             <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl border border-border/60 bg-secondary/80">
@@ -279,7 +275,7 @@ export default function MenuPage() {
                     </div>
                   </div>
                 </div>
-                <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto scrollbar-hide pb-1 pl-1 pr-4">
+                <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto scrollbar-hide pb-1 pl-1 pr-4 md:mx-0 md:pr-0">
                   {destaquesOrdenados.map((item) => {
                     const firstLineId = getFirstCartLineId(item.id)
                     return (
@@ -313,7 +309,7 @@ export default function MenuPage() {
                     </div>
                   </div>
                 </div>
-                <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto scrollbar-hide pb-1 pl-1 pr-4">
+                <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto scrollbar-hide pb-1 pl-1 pr-4 md:mx-0 md:pr-0">
                   {combos.map((combo) => {
                     const comboItem: ItemCardapio = {
                       id: combo.id,
@@ -423,6 +419,72 @@ export default function MenuPage() {
           </div>
         )}
       </div>
+
+      {categorias.length > 0 && (
+        <>
+          {filtroAberto && (
+            <button
+              type="button"
+              className="fixed inset-0 z-40 bg-black/20 md:hidden"
+              aria-label="Fechar filtros"
+              onClick={() => setFiltroAberto(false)}
+            />
+          )}
+
+          <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2 md:hidden">
+            {filtroAberto && (
+              <div className="max-h-[60vh] w-[240px] overflow-y-auto rounded-2xl border border-border/80 bg-card p-2 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoriaSelecionada('todas')
+                    setFiltroAberto(false)
+                  }}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold',
+                    categoriaSelecionada === 'todas'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  )}
+                >
+                  <span>{t.all}</span>
+                  {categoriaSelecionada === 'todas' && <Check size={16} />}
+                </button>
+                {categorias.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setCategoriaSelecionada(cat.id)
+                      setFiltroAberto(false)
+                    }}
+                    className={cn(
+                      'mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold',
+                      categoriaSelecionada === cat.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground hover:bg-muted'
+                    )}
+                  >
+                    <span className="truncate">{cat.icone ? `${cat.icone} ${cat.nome}` : cat.nome}</span>
+                    {categoriaSelecionada === cat.id && <Check size={16} />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setFiltroAberto((prev) => !prev)}
+              className="flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
+              aria-expanded={filtroAberto}
+              aria-label="Abrir filtros"
+            >
+              <SlidersHorizontal size={17} />
+              Filtros
+            </button>
+          </div>
+        </>
+      )}
     </main>
   )
 }
@@ -448,13 +510,13 @@ function DestaqueCard({
 }) {
   const href = disableLink ? '/#sec-combos' : `/produto/${item.id}`
   return (
-    <article className="w-[168px] shrink-0 snap-start overflow-hidden rounded-xl border border-border/80 bg-card shadow-[var(--shadow-luxury)]">
+    <article className="w-[168px] shrink-0 snap-start overflow-hidden rounded-xl border border-border/80 bg-card shadow-[var(--shadow-luxury)] md:w-[220px]">
       <Link
         href={href}
         className="block rounded-t-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {item.imagem_url ? (
-          <div className="aspect-4/3 w-full overflow-hidden bg-muted">
+          <div className="aspect-4/3 w-full overflow-hidden bg-muted md:aspect-[16/10]">
             <img src={item.imagem_url} alt="" className="h-full w-full object-cover" />
           </div>
         ) : (
@@ -470,7 +532,7 @@ function DestaqueCard({
         >
           {item.nome}
         </Link>
-        <p className="mt-2 font-serif text-base font-semibold tabular-nums text-primary">
+        <p className="mt-2 text-base font-semibold tabular-nums text-primary">
           {currency}
           {item.preco.toFixed(2)}
         </p>
@@ -481,7 +543,6 @@ function DestaqueCard({
               onClick={onAdd}
               className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-transform active:scale-[0.98]"
             >
-              <Plus size={16} strokeWidth={2.5} aria-hidden />
               {addLabel}
             </button>
           ) : (
@@ -498,10 +559,10 @@ function DestaqueCard({
               <button
                 type="button"
                 onClick={onInc}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm active:scale-[0.98]"
-                aria-label="Adicionar uma unidade"
+                className="flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm active:scale-[0.98]"
+                aria-label={addLabel}
               >
-                <Plus size={16} strokeWidth={2.5} />
+                {addLabel}
               </button>
             </div>
           )}
@@ -560,7 +621,7 @@ function ItemCard({
           )}
         </div>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="font-serif text-base font-semibold tabular-nums text-primary">
+          <p className="text-base font-semibold tabular-nums text-primary">
             {currency}
             {item.preco.toFixed(2)}
           </p>
@@ -569,10 +630,10 @@ function ItemCard({
               <button
                 type="button"
                 onClick={onAdd}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform active:scale-[0.98]"
+                className="flex h-10 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm transition-transform active:scale-[0.98]"
                 aria-label={`${addLabel}: ${item.nome}`}
               >
-                <Plus size={20} strokeWidth={2.5} />
+                {addLabel}
               </button>
             ) : (
               <div className="flex h-10 items-center gap-1 rounded-xl border border-border/60 bg-secondary/80 px-1">
@@ -588,10 +649,10 @@ function ItemCard({
                 <button
                   type="button"
                   onClick={onInc}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm"
-                  aria-label="Adicionar uma unidade"
+                  className="flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm"
+                  aria-label={addLabel}
                 >
-                  <Plus size={16} strokeWidth={2.5} />
+                  {addLabel}
                 </button>
               </div>
             )}

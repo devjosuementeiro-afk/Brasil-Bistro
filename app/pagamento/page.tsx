@@ -422,7 +422,7 @@ export default function PagamentoPage() {
 
   if (!customerChecked || !checkoutCustomer) {
     return (
-      <main className="mx-auto min-h-screen max-w-lg bg-background px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <main className="mx-auto min-h-screen w-full max-w-[1180px] bg-background px-4 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-6">
         <p className="text-sm text-muted-foreground">{t.paymentCheckoutLoading}</p>
       </main>
     )
@@ -430,7 +430,7 @@ export default function PagamentoPage() {
 
   if (successOrderNumber) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center bg-background px-6 text-center">
+      <main className="mx-auto flex min-h-screen w-full max-w-[1180px] flex-col items-center justify-center bg-background px-6 text-center">
         <div className="relative mb-6">
           <div className="absolute inset-0 rounded-full bg-green-200 animate-ping opacity-40" />
           <div className="relative w-20 h-20 rounded-full bg-green-500 text-white flex items-center justify-center text-4xl shadow-lg">
@@ -455,7 +455,7 @@ export default function PagamentoPage() {
 
   if (items.length === 0) {
     return (
-      <main className="min-h-screen bg-background max-w-lg mx-auto px-4 pt-10">
+      <main className="mx-auto min-h-screen w-full max-w-[1180px] bg-background px-4 pt-10 md:px-6">
         <Link href="/carrinho" className="text-sm font-semibold text-accent">
           {t.paymentBackToCart}
         </Link>
@@ -465,7 +465,7 @@ export default function PagamentoPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-lg bg-background pb-28">
+    <main className="mx-auto min-h-screen w-full max-w-[1180px] bg-background pb-28 md:px-6 md:pb-10">
       {!!paypalScriptSrc && (
         <Script
           key={`paypal-sdk-${lang}`}
@@ -475,7 +475,7 @@ export default function PagamentoPage() {
         />
       )}
 
-      <header className="sticky top-0 z-40 border-b border-border/90 bg-background/90 px-4 pb-3 backdrop-blur-md pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <header className="sticky top-0 z-40 border-b border-border/90 bg-background/90 px-4 pb-3 backdrop-blur-md pt-[max(0.75rem,env(safe-area-inset-top))] md:px-0">
         <div className="flex items-center gap-3">
           <Link
             href="/checkout/dados"
@@ -488,8 +488,10 @@ export default function PagamentoPage() {
         </div>
       </header>
 
-      <section className="px-4 pt-4 space-y-4">
-        <div className="space-y-0.5 rounded-3xl border border-border bg-card p-3 text-xs text-muted-foreground shadow-sm">
+      <section className="px-4 pt-4 md:px-0">
+        <div className="space-y-4 md:grid md:grid-cols-[minmax(0,1fr)_380px] md:items-start md:gap-6 md:space-y-0">
+          <div className="space-y-4">
+            <div className="space-y-0.5 rounded-3xl border border-border bg-card p-3 text-xs text-muted-foreground shadow-sm">
           <p className="font-semibold text-foreground text-sm">{checkoutCustomer.nome}</p>
           <p>{checkoutCustomer.email}</p>
           <p>{checkoutCustomer.telefone}</p>
@@ -508,9 +510,9 @@ export default function PagamentoPage() {
           <Link href="/checkout/dados" className="inline-block pt-1 font-medium text-accent">
             {t.paymentEditDetails}
           </Link>
-        </div>
+            </div>
 
-        <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+            <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {t.paymentOrderSummary}
           </p>
@@ -612,9 +614,9 @@ export default function PagamentoPage() {
               {totalWithDeliveryFee.toFixed(2)}
             </span>
           </div>
-        </div>
+            </div>
 
-        <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
+            <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
           <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {t.paymentPromoCodeLabel}
           </label>
@@ -634,10 +636,24 @@ export default function PagamentoPage() {
             >
               {t.cartPromoApply}
             </button>
+            {promoCode.trim() ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPromoDraft('')
+                  setPromoCode('')
+                }}
+                className="shrink-0 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground"
+              >
+                Remover
+              </button>
+            ) : null}
           </div>
-        </div>
+            </div>
+          </div>
 
-        <div className="rounded-3xl border border-border bg-card p-2 shadow-sm">
+          <div className="space-y-4 md:sticky md:top-24">
+            <div className="rounded-3xl border border-border bg-card p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -668,9 +684,9 @@ export default function PagamentoPage() {
               </span>
             </button>
           </div>
-        </div>
+            </div>
 
-        <div className={`${method === 'card' ? '' : 'hidden'} space-y-2 rounded-3xl border border-border bg-card p-3 shadow-sm`}>
+            <div className={`${method === 'card' ? '' : 'hidden'} space-y-2 rounded-3xl border border-border bg-card p-3 shadow-sm`}>
           {!sdkLoaded && (
             <p className="py-6 text-center text-sm text-muted-foreground">{t.paymentCardLoading}</p>
           )}
@@ -704,16 +720,18 @@ export default function PagamentoPage() {
               {cardFieldsLoading ? t.paymentProcessing : t.paymentPayConfirm}
             </button>
           </div>
-        </div>
+            </div>
 
-        <div className={`${method === 'paypal' ? '' : 'hidden'} rounded-3xl border border-border bg-card p-4 shadow-sm`}>
+            <div className={`${method === 'paypal' ? '' : 'hidden'} rounded-3xl border border-border bg-card p-4 shadow-sm`}>
           <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">{t.paymentPaypalSecureTitle}</p>
           <p className="mb-3 text-[11px] leading-snug text-muted-foreground">{t.paymentPaypalIntro}</p>
           <div id="paypal-button-container" />
-        </div>
+            </div>
 
-        {paypalError && <p className="text-xs text-red-500">{paypalError}</p>}
-        {resultMessage && <p className="text-xs text-foreground">{resultMessage}</p>}
+            {paypalError && <p className="text-xs text-red-500">{paypalError}</p>}
+            {resultMessage && <p className="text-xs text-foreground">{resultMessage}</p>}
+          </div>
+        </div>
       </section>
 
     </main>

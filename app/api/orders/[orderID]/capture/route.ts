@@ -3,6 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { parseCustomerPayload } from '@/lib/checkout-customer'
 import { getDeliveryFeeAmount } from '@/lib/store-settings'
 import { computePromotionForOrderCart } from '@/lib/order-promotions'
+import {
+  buildKitchenReceiptText,
+  createPrintNodeRawJob,
+  getPrintNodeConfig,
+} from '@/lib/printnode'
 
 const PAYPAL_API_BASE =
   process.env.PAYPAL_ENV === 'live'
@@ -278,6 +283,55 @@ export async function POST(
       ? localOrderId.replace(/-/g, '').slice(-8).toUpperCase()
       : null
 
+    if (localOrderId && orderNumber) {
+      try {
+        const printCfg = await getPrintNodeConfig()
+        if (printCfg.enabled && printCfg.printerId) {
+          const subtotal = Number(subtotalBeforePromo(safeItems).toFixed(2))
+          const discount = Number(Math.max(0, promo.discountAmount).toFixed(2))
+          const receipt = buildKitchenReceiptText({
+            orderNumber,
+            createdAtISO: new Date().toISOString(),
+            customerName: customer.nome,
+            customerPhone: customer.telefone,
+            fulfillmentType: customer.fulfillmentType,
+            address: customer.enderecoEntrega,
+            items: safeItems.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+              unitAmount: item.unitAmount,
+              subtotal: Number((item.quantity * item.unitAmount).toFixed(2)),
+              observation: item.observation,
+              options: item.selectedOptions.map((op) => ({
+                label: op.label,
+                groupName: op.groupName,
+                groupType: op.groupType,
+              })),
+            })),
+            subtotal,
+            discount,
+            deliveryFee,
+            total: totalValue,
+            currency: '$',
+          })
+          await createPrintNodeRawJob({
+            apiKey: printCfg.apiKey,
+            printerId: printCfg.printerId,
+            title: `Pedido #${orderNumber}`,
+            content: receipt,
+            source: 'Brasil Bistro Checkout',
+            idempotencyKey: `pedido-${localOrderId}`,
+          })
+        }
+      } catch (printError) {
+        console.error('[PrintNode] Falha ao imprimir pedido confirmado', {
+          localOrderId,
+          orderID,
+          error: printError instanceof Error ? printError.message : String(printError),
+        })
+      }
+    }
+
     return NextResponse.json(
       {
         ...data,
@@ -297,4 +351,10 @@ export async function POST(
       { status: 500 }
     )
   }
+}
+
+function subtotalBeforePromo(
+  items: Array<{ quantity: number; unitAmount: number }>
+) {
+  return items.reduce((acc, item) => acc + item.quantity * item.unitAmount, 0)
 }

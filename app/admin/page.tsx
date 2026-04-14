@@ -11,6 +11,9 @@ import {
 import { cn } from '@/lib/utils'
 import { useLang } from '@/lib/lang-context'
 import { LogoLoadingScreen } from '@/components/logo-loading-screen'
+import { AdminCombosPanel } from '@/components/admin-combos-panel'
+import { AdminPromocoesPanel } from '@/app/admin/promocoes/page'
+import { AdminPrintNodePanel } from '@/components/admin-printnode-panel'
 
 const BUCKET = 'cardapio-imagens'
 
@@ -93,7 +96,7 @@ export default function AdminPage() {
   const supabase = createClient()
   const { t, lang, toggleLang } = useLang()
 
-  const TABS = [t.tabItems, t.tabCategories] as const
+  const TABS = [t.tabItems, t.tabCategories, 'Combos', t.promoNavLink, 'PrintNode'] as const
   type Tab = typeof TABS[number]
 
   const [tab, setTab] = useState<Tab>(t.tabItems)
@@ -782,6 +785,9 @@ export default function AdminPage() {
   }
 
   const isItemsTab = tab === t.tabItems
+  const isCombosTab = tab === 'Combos'
+  const isPromotionsTab = tab === t.promoNavLink
+  const isPrintNodeTab = tab === 'PrintNode'
 
   const sidebarNav = (
     <>
@@ -817,18 +823,6 @@ export default function AdminPage() {
           className="rounded-xl bg-secondary px-3 py-2.5 text-center text-sm font-bold text-foreground transition-colors hover:bg-secondary/80"
         >
           Ordens
-        </Link>
-        <Link
-          href="/admin/promocoes"
-          className="rounded-xl bg-secondary px-3 py-2.5 text-center text-sm font-bold text-foreground transition-colors hover:bg-secondary/80"
-        >
-          {t.promoNavLink}
-        </Link>
-        <Link
-          href="/admin/combos"
-          className="rounded-xl bg-secondary px-3 py-2.5 text-center text-sm font-bold text-foreground transition-colors hover:bg-secondary/80"
-        >
-          Combos
         </Link>
         <button
           type="button"
@@ -875,24 +869,6 @@ export default function AdminPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Link
-                  href="/admin/ordens"
-                  className="rounded-xl bg-primary px-2.5 py-1.5 text-xs font-bold text-primary-foreground"
-                >
-                  Ordens
-                </Link>
-                <Link
-                  href="/admin/promocoes"
-                  className="rounded-xl bg-secondary px-2.5 py-1.5 text-xs font-bold text-muted-foreground"
-                >
-                  {t.promoNavLink}
-                </Link>
-                <Link
-                  href="/admin/combos"
-                  className="rounded-xl bg-secondary px-2.5 py-1.5 text-xs font-bold text-muted-foreground"
-                >
-                  Combos
-                </Link>
                 <button
                   type="button"
                   onClick={toggleLang}
@@ -934,10 +910,26 @@ export default function AdminPage() {
         {/* Desktop page title */}
         <div className="hidden border-b border-border/80 bg-background/95 px-8 py-5 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:block">
           <h2 className="font-serif text-xl font-semibold tracking-tight text-foreground">
-            {isItemsTab ? t.tabItems : t.tabCategories}
+            {isItemsTab
+              ? t.tabItems
+              : isCombosTab
+                ? 'Combos'
+                : isPromotionsTab
+                  ? t.promoNavLink
+                  : isPrintNodeTab
+                    ? 'PrintNode'
+                  : t.tabCategories}
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {isItemsTab ? textoContagemItens : `${categorias.length} ${t.tabCategories.toLowerCase()}`}
+            {isItemsTab
+              ? textoContagemItens
+              : isCombosTab
+                ? 'Gerencie seus combos'
+                : isPromotionsTab
+                  ? 'Gerencie promoções e taxa de entrega'
+                  : isPrintNodeTab
+                    ? 'Configurações de impressão de pedidos'
+                : `${categorias.length} ${t.tabCategories.toLowerCase()}`}
           </p>
         </div>
 
@@ -1228,6 +1220,12 @@ export default function AdminPage() {
               </>
             )}
           </>
+        ) : isCombosTab ? (
+          <AdminCombosPanel />
+        ) : isPromotionsTab ? (
+          <AdminPromocoesPanel embedded />
+        ) : isPrintNodeTab ? (
+          <AdminPrintNodePanel />
         ) : (
           <>
             <div className="mb-4 flex items-center justify-between gap-4 lg:mb-6">

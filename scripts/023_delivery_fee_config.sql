@@ -4,6 +4,9 @@ ALTER TABLE public.pedidos
 CREATE TABLE IF NOT EXISTS public.configuracoes_loja (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   taxa_entrega_padrao NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (taxa_entrega_padrao >= 0),
+  printnode_ativo BOOLEAN NOT NULL DEFAULT false,
+  printnode_api_key TEXT,
+  printnode_printer_id BIGINT,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
