@@ -12,6 +12,8 @@ export interface ItemCardapio {
   preco: number
   imagem_url: string | null
   categoria_id: string | null
+  comboId?: string | null
+  isCombo?: boolean
   quantidade_info?: string | null
   tamanhos_disponiveis?: string | null
   ingredientes_info?: string | null
@@ -180,6 +182,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const payload = {
       items: items.map((ci) => ({
         item: { id: ci.item.id, categoria_id: ci.item.categoria_id },
+        quantity: ci.quantity,
+        unitPrice: ci.unitPrice,
         totalPrice: ci.totalPrice,
       })),
       promoCode: promoCode.trim() || null,

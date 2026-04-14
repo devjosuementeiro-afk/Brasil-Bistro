@@ -11,6 +11,7 @@ DECLARE
   meta jsonb := COALESCE(NEW.raw_user_meta_data, '{}'::jsonb);
   nome text;
   tel text;
+  endereco text;
   sms_ok boolean;
   email_ok boolean;
   cartao_ok boolean;
@@ -22,6 +23,7 @@ BEGIN
 
   nome := NULLIF(trim(COALESCE(meta->>'nome_completo', '')), '');
   tel := NULLIF(trim(COALESCE(meta->>'telefone', '')), '');
+  endereco := NULLIF(trim(COALESCE(meta->>'endereco_entrega', '')), '');
 
   IF nome IS NULL THEN
     nome := '';
@@ -38,6 +40,7 @@ BEGIN
     user_id,
     nome_completo,
     telefone,
+    endereco_entrega,
     aceita_sms_atualizacoes_pedido,
     aceita_email_atualizacoes_pedido,
     prefere_salvar_cartao_futuro
@@ -46,6 +49,7 @@ BEGIN
     NEW.id,
     nome,
     tel,
+    endereco,
     sms_ok,
     email_ok,
     cartao_ok
@@ -53,6 +57,7 @@ BEGIN
   ON CONFLICT (user_id) DO UPDATE SET
     nome_completo = EXCLUDED.nome_completo,
     telefone = EXCLUDED.telefone,
+    endereco_entrega = EXCLUDED.endereco_entrega,
     aceita_sms_atualizacoes_pedido = EXCLUDED.aceita_sms_atualizacoes_pedido,
     aceita_email_atualizacoes_pedido = EXCLUDED.aceita_email_atualizacoes_pedido,
     prefere_salvar_cartao_futuro = EXCLUDED.prefere_salvar_cartao_futuro,

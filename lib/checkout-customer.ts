@@ -1,10 +1,14 @@
 export const CHECKOUT_STORAGE_KEY = 'nmfc-checkout-v1'
 
+export type FulfillmentType = 'take_out' | 'delivery'
+
 export type CheckoutCustomer = {
   nome: string
   email: string
   telefone: string
   userId: string | null
+  fulfillmentType: FulfillmentType
+  enderecoEntrega: string
   aceitaSmsAtualizacoes: boolean
   aceitaEmailAtualizacoes: boolean
   prefereSalvarCartao: boolean
@@ -28,6 +32,8 @@ export function isValidCheckoutCustomer(c: CheckoutCustomer | null): boolean {
   if (nome.length < 2) return false
   if (!email.includes('@') || email.length < 5) return false
   if (tel.length < 8) return false
+  if (c.fulfillmentType !== 'take_out' && c.fulfillmentType !== 'delivery') return false
+  if (c.fulfillmentType === 'delivery' && c.enderecoEntrega.trim().length < 6) return false
   return true
 }
 
@@ -45,6 +51,8 @@ export function loadCheckoutCustomer(): CheckoutCustomer | null {
       email: p.email,
       telefone: p.telefone,
       userId: typeof p.userId === 'string' ? p.userId : null,
+      fulfillmentType: p.fulfillmentType === 'delivery' ? 'delivery' : 'take_out',
+      enderecoEntrega: typeof p.enderecoEntrega === 'string' ? p.enderecoEntrega : '',
       aceitaSmsAtualizacoes: readBool(p.aceitaSmsAtualizacoes),
       aceitaEmailAtualizacoes: readBool(p.aceitaEmailAtualizacoes),
       prefereSalvarCartao: readBool(p.prefereSalvarCartao),
@@ -69,6 +77,8 @@ export type CustomerPayload = {
   email: string
   telefone: string
   userId: string | null
+  fulfillmentType: FulfillmentType
+  enderecoEntrega: string | null
   aceitaSmsAtualizacoes: boolean
   aceitaEmailAtualizacoes: boolean
   consentiuSalvarCartao: boolean
@@ -89,6 +99,9 @@ export function parseCustomerPayload(
     rawUid === null || rawUid === undefined || rawUid === ''
       ? null
       : String(rawUid)
+  const fulfillmentType = c.fulfillmentType === 'delivery' ? 'delivery' : 'take_out'
+  const enderecoEntregaRaw = String(c.enderecoEntrega ?? '').trim()
+  const enderecoEntrega = fulfillmentType === 'delivery' ? enderecoEntregaRaw : null
 
   const aceitaSmsAtualizacoes = readBool(c.aceitaSmsAtualizacoes)
   const aceitaEmailAtualizacoes = readBool(c.aceitaEmailAtualizacoes)
@@ -97,6 +110,9 @@ export function parseCustomerPayload(
   if (nome.length < 2) return { ok: false, message: 'Nome inválido.' }
   if (!email.includes('@') || email.length < 5) return { ok: false, message: 'E-mail inválido.' }
   if (telefone.length < 8) return { ok: false, message: 'Telefone inválido.' }
+  if (fulfillmentType === 'delivery' && enderecoEntregaRaw.length < 6) {
+    return { ok: false, message: 'Endereço de entrega inválido.' }
+  }
 
   return {
     ok: true,
@@ -105,6 +121,8 @@ export function parseCustomerPayload(
       email,
       telefone,
       userId,
+      fulfillmentType,
+      enderecoEntrega,
       aceitaSmsAtualizacoes,
       aceitaEmailAtualizacoes,
       consentiuSalvarCartao,

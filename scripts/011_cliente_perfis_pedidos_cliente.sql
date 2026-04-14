@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS public.cliente_perfis (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   nome_completo TEXT NOT NULL,
   telefone TEXT NOT NULL DEFAULT '',
+  endereco_entrega TEXT,
   aceita_sms_atualizacoes_pedido BOOLEAN NOT NULL DEFAULT false,
   aceita_email_atualizacoes_pedido BOOLEAN NOT NULL DEFAULT false,
   prefere_salvar_cartao_futuro BOOLEAN NOT NULL DEFAULT false,
@@ -34,4 +35,6 @@ ALTER TABLE public.pedidos
   ADD COLUMN IF NOT EXISTS cliente_nome TEXT,
   ADD COLUMN IF NOT EXISTS cliente_email TEXT,
   ADD COLUMN IF NOT EXISTS cliente_telefone TEXT,
+  ADD COLUMN IF NOT EXISTS tipo_atendimento TEXT NOT NULL DEFAULT 'take_out',
+  ADD COLUMN IF NOT EXISTS endereco_entrega TEXT,
   ADD COLUMN IF NOT EXISTS cliente_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
