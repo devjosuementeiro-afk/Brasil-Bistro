@@ -11,6 +11,7 @@ import {
   loadCheckoutCustomer,
   normalizePhone,
   saveCheckoutCustomer,
+  type FulfillmentType,
   type CheckoutCustomer,
 } from '@/lib/checkout-customer'
 import { LogoLoadingScreen } from '@/components/logo-loading-screen'
@@ -24,6 +25,8 @@ export default function CheckoutDadosPage() {
   const [telefone, setTelefone] = useState('')
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('take_out')
+  const [enderecoEntrega, setEnderecoEntrega] = useState('')
   const [aceitaSms, setAceitaSms] = useState(false)
   const [aceitaEmail, setAceitaEmail] = useState(false)
   const [prefereSalvarCartao, setPrefereSalvarCartao] = useState(false)
@@ -47,9 +50,13 @@ export default function CheckoutDadosPage() {
         setNome(saved.nome)
         setEmail(saved.email)
         setTelefone(saved.telefone)
+        setFulfillmentType(saved.fulfillmentType)
+        setEnderecoEntrega(saved.enderecoEntrega)
         setAceitaSms(saved.aceitaSmsAtualizacoes)
       } else {
         setAceitaSms(false)
+        setFulfillmentType('take_out')
+        setEnderecoEntrega('')
       }
       setLoading(false)
       return
@@ -63,7 +70,7 @@ export default function CheckoutDadosPage() {
     const { data: perfil } = await supabase
       .from('cliente_perfis')
       .select(
-        'nome_completo, telefone, aceita_sms_atualizacoes_pedido, aceita_email_atualizacoes_pedido, prefere_salvar_cartao_futuro'
+        'nome_completo, telefone, aceita_sms_atualizacoes_pedido, aceita_email_atualizacoes_pedido, prefere_salvar_cartao_futuro, endereco_entrega'
       )
       .eq('user_id', user.id)
       .maybeSingle()
@@ -73,18 +80,24 @@ export default function CheckoutDadosPage() {
     const aceitaSmsVal = !!perfil?.aceita_sms_atualizacoes_pedido
     const aceitaEmailVal = !!perfil?.aceita_email_atualizacoes_pedido
     const prefereVal = !!perfil?.prefere_salvar_cartao_futuro
+    const enderecoEntregaVal = String(perfil?.endereco_entrega ?? '').trim()
+    const fulfillmentVal: FulfillmentType = enderecoEntregaVal ? 'delivery' : 'take_out'
 
     setNome(nomeVal)
     setTelefone(telefoneVal)
     setAceitaSms(aceitaSmsVal)
     setAceitaEmail(aceitaEmailVal)
     setPrefereSalvarCartao(prefereVal)
+    setEnderecoEntrega(enderecoEntregaVal)
+    setFulfillmentType(fulfillmentVal)
 
     const c: CheckoutCustomer = {
       nome: nomeVal,
       email: emailVal,
       telefone: telefoneVal,
       userId: user.id,
+      fulfillmentType: fulfillmentVal,
+      enderecoEntrega: enderecoEntregaVal,
       aceitaSmsAtualizacoes: aceitaSmsVal,
       aceitaEmailAtualizacoes: aceitaEmailVal,
       prefereSalvarCartao: prefereVal,
@@ -125,6 +138,8 @@ export default function CheckoutDadosPage() {
     setEmail('')
     setNome('')
     setTelefone('')
+    setFulfillmentType('take_out')
+    setEnderecoEntrega('')
     setAceitaSms(false)
     setAceitaEmail(false)
     setPrefereSalvarCartao(false)
@@ -151,12 +166,18 @@ export default function CheckoutDadosPage() {
       setErro(t.checkoutErrEmail)
       return
     }
+    if (fulfillmentType === 'delivery' && enderecoEntrega.trim().length < 6) {
+      setErro(t.checkoutErrAddress)
+      return
+    }
 
     const c: CheckoutCustomer = {
       nome: n,
       email: em,
       telefone: telRaw,
       userId,
+      fulfillmentType,
+      enderecoEntrega: enderecoEntrega.trim(),
       aceitaSmsAtualizacoes: aceitaSms,
       aceitaEmailAtualizacoes: userId ? aceitaEmail : false,
       prefereSalvarCartao: userId ? prefereSalvarCartao : false,
@@ -175,6 +196,7 @@ export default function CheckoutDadosPage() {
           user_id: userId,
           nome_completo: c.nome,
           telefone: c.telefone,
+          endereco_entrega: c.enderecoEntrega || null,
           aceita_sms_atualizacoes_pedido: aceitaSms,
           aceita_email_atualizacoes_pedido: aceitaEmail,
           prefere_salvar_cartao_futuro: prefereSalvarCartao,
@@ -259,6 +281,9 @@ export default function CheckoutDadosPage() {
               {t.checkoutGuestContactTitle}
             </p>
           )}
+          {fulfillmentType === 'delivery' && userId && enderecoEntrega.trim().length >= 6 && (
+            <p className="text-[11px] text-muted-foreground">{t.checkoutDeliveryAddressSaved}</p>
+          )}
 
           <div>
             <label htmlFor="nome" className="mb-1 block text-xs font-semibold">
@@ -314,6 +339,60 @@ export default function CheckoutDadosPage() {
               />
             </div>
             <p className="mt-1 text-[10px] text-muted-foreground">{t.checkoutEmailHelp}</p>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+            <p className="text-xs font-semibold text-foreground">{t.checkoutFulfillmentTitle}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFulfillmentType('take_out')}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+                  fulfillmentType === 'take_out'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-foreground'
+                }`}
+              >
+                {t.checkoutTakeOut}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFulfillmentType('delivery')}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+                  fulfillmentType === 'delivery'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-foreground'
+                }`}
+              >
+                {t.checkoutDelivery}
+              </button>
+            </div>
+            {fulfillmentType === 'delivery' ? (
+              <div>
+                <label htmlFor="endereco-entrega" className="mb-1 block text-xs font-semibold">
+                  {t.checkoutDeliveryAddressLabel}
+                </label>
+                {userId && enderecoEntrega.trim().length >= 6 ? (
+                  <p className="rounded-2xl border border-border bg-background px-3 py-2.5 text-sm">
+                    {enderecoEntrega.trim()}
+                  </p>
+                ) : (
+                  <textarea
+                    id="endereco-entrega"
+                    value={enderecoEntrega}
+                    onChange={(e) => setEnderecoEntrega(e.target.value)}
+                    required
+                    minLength={6}
+                    autoComplete="street-address"
+                    rows={3}
+                    className="w-full rounded-2xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder={t.checkoutDeliveryAddressPlaceholder}
+                  />
+                )}
+              </div>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">{t.checkoutTakeOutHint}</p>
+            )}
           </div>
 
           <div className="space-y-3 rounded-2xl border border-border bg-card p-4">

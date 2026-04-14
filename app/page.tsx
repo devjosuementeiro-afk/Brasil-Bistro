@@ -10,6 +10,7 @@ import { useLang } from '@/lib/lang-context'
 import { cn } from '@/lib/utils'
 import logoPrincipal from '@/logo/logo-principal-preto.png'
 import { LogoLoadingScreen } from '@/components/logo-loading-screen'
+import { HomePromoCarousel } from '@/components/home-promo-carousel'
 
 interface Categoria {
   id: string
@@ -19,14 +20,27 @@ interface Categoria {
 }
 
 interface ItemComCategoria extends ItemCardapio {
+  ordem: number
   disponivel: boolean
   destaque: boolean
   categorias: Categoria | null
 }
 
+type ComboHome = {
+  id: string
+  nome: string
+  descricao: string | null
+  preco: number
+  imagem_url: string | null
+  destaque: boolean
+  ativo: boolean
+  ordem: number
+}
+
 export default function MenuPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [itens, setItens] = useState<ItemComCategoria[]>([])
+  const [combos, setCombos] = useState<ComboHome[]>([])
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('todas')
   const [loading, setLoading] = useState(true)
   const { totalItems, items, addItem, updateQuantity } = useCart()
@@ -35,7 +49,7 @@ export default function MenuPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const [{ data: cats }, { data: its }] = await Promise.all([
+    const [{ data: cats }, { data: its }, { data: cbs }] = await Promise.all([
       supabase.from('categorias').select('*').eq('ativo', true).order('ordem'),
       supabase
         .from('itens_cardapio')
@@ -43,9 +57,16 @@ export default function MenuPage() {
         .eq('disponivel', true)
         .order('destaque', { ascending: false })
         .order('ordem'),
+      supabase
+        .from('combos')
+        .select('id, nome, descricao, preco, imagem_url, destaque, ativo, ordem')
+        .eq('ativo', true)
+        .order('destaque', { ascending: false })
+        .order('ordem'),
     ])
     setCategorias(cats ?? [])
     setItens(its ?? [])
+    setCombos((cbs as ComboHome[]) ?? [])
     setLoading(false)
   }, [])
 
@@ -226,6 +247,8 @@ export default function MenuPage() {
         )}
       </header>
 
+      <HomePromoCarousel />
+
       <div className="px-4 pt-6">
         {itensFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-card/80 px-6 py-16 text-center shadow-[var(--shadow-card)]">
@@ -269,6 +292,57 @@ export default function MenuPage() {
                         onAdd={() => addItem(item, 1)}
                         onInc={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) + 1)}
                         onDec={() => firstLineId && updateQuantity(firstLineId, getQtd(item.id) - 1)}
+                      />
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {combos.length > 0 && (
+              <section aria-labelledby="sec-combos">
+                <div className="mb-4 flex items-center justify-between gap-2 px-0.5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/8 text-primary">
+                      <UtensilsCrossed size={17} strokeWidth={1.5} className="text-primary" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <h2 id="sec-combos" className="font-serif text-lg font-semibold tracking-tight text-foreground">
+                        Combos
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+                <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto scrollbar-hide pb-1 pl-1 pr-4">
+                  {combos.map((combo) => {
+                    const comboItem: ItemCardapio = {
+                      id: combo.id,
+                      nome: combo.nome,
+                      descricao: combo.descricao,
+                      preco: Number(combo.preco),
+                      imagem_url: combo.imagem_url,
+                      categoria_id: null,
+                      comboId: combo.id,
+                      isCombo: true,
+                    }
+                    const firstLineId = getFirstCartLineId(combo.id)
+                    return (
+                      <DestaqueCard
+                        key={`combo-${combo.id}`}
+                        item={{
+                          ...comboItem,
+                          ordem: combo.ordem ?? 0,
+                          disponivel: true,
+                          destaque: combo.destaque,
+                          categorias: null,
+                        }}
+                        qtd={getQtd(combo.id)}
+                        addLabel={t.addToCart}
+                        currency={t.currency}
+                        onAdd={() => addItem(comboItem, 1)}
+                        onInc={() => firstLineId && updateQuantity(firstLineId, getQtd(combo.id) + 1)}
+                        onDec={() => firstLineId && updateQuantity(firstLineId, getQtd(combo.id) - 1)}
+                        disableLink
                       />
                     )
                   })}
@@ -361,6 +435,7 @@ function DestaqueCard({
   onAdd,
   onInc,
   onDec,
+  disableLink = false,
 }: {
   item: ItemComCategoria
   qtd: number
@@ -369,11 +444,13 @@ function DestaqueCard({
   onAdd: () => void
   onInc: () => void
   onDec: () => void
+  disableLink?: boolean
 }) {
+  const href = disableLink ? '/#sec-combos' : `/produto/${item.id}`
   return (
     <article className="w-[168px] shrink-0 snap-start overflow-hidden rounded-xl border border-border/80 bg-card shadow-[var(--shadow-luxury)]">
       <Link
-        href={`/produto/${item.id}`}
+        href={href}
         className="block rounded-t-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {item.imagem_url ? (
@@ -388,7 +465,7 @@ function DestaqueCard({
       </Link>
       <div className="p-3.5 pt-3">
         <Link
-          href={`/produto/${item.id}`}
+          href={href}
           className="line-clamp-2 min-h-10 text-[13px] font-semibold leading-snug text-foreground transition-colors hover:text-primary"
         >
           {item.nome}

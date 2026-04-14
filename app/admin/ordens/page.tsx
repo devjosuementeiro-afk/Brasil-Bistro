@@ -23,9 +23,12 @@ type KitchenOrder = {
   criado_em: string
   valor_total: number
   valor_pago: number | null
+  taxa_entrega: number | null
   cliente_nome: string | null
   cliente_email: string | null
   cliente_telefone: string | null
+  tipo_atendimento: 'take_out' | 'delivery' | null
+  endereco_entrega: string | null
   status_producao: KitchenStatus
   pedido_itens: OrderItem[]
 }
@@ -108,7 +111,7 @@ export default function AdminOrdensPage() {
     const { data } = await supabase
       .from('pedidos')
       .select(
-        'id, criado_em, valor_total, valor_pago, cliente_nome, cliente_email, cliente_telefone, status_producao, pedido_itens(nome_item, quantidade, observacao, opcoes_selecionadas)'
+        'id, criado_em, valor_total, valor_pago, taxa_entrega, cliente_nome, cliente_email, cliente_telefone, tipo_atendimento, endereco_entrega, status_producao, pedido_itens(nome_item, quantidade, observacao, opcoes_selecionadas)'
       )
       .order('criado_em', { ascending: false })
 
@@ -288,6 +291,11 @@ export default function AdminOrdensPage() {
                             ).toFixed(2)}
                           </p>
                         </div>
+                        {Number(order.taxa_entrega ?? 0) > 0 ? (
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            {t.paymentDeliveryFee}: ${Number(order.taxa_entrega ?? 0).toFixed(2)}
+                          </p>
+                        ) : null}
                         {(order.cliente_nome || order.cliente_email || order.cliente_telefone) && (
                           <div className="mt-2 space-y-0.5 border-t border-border pt-2 text-[11px] text-muted-foreground">
                             {order.cliente_nome && (
@@ -295,6 +303,16 @@ export default function AdminOrdensPage() {
                             )}
                             {order.cliente_email && <p>{order.cliente_email}</p>}
                             {order.cliente_telefone && <p>Tel. {order.cliente_telefone}</p>}
+                            {order.tipo_atendimento && (
+                              <p>
+                                {order.tipo_atendimento === 'delivery'
+                                  ? t.checkoutDelivery
+                                  : t.checkoutTakeOut}
+                              </p>
+                            )}
+                            {order.tipo_atendimento === 'delivery' && order.endereco_entrega ? (
+                              <p>{order.endereco_entrega}</p>
+                            ) : null}
                           </div>
                         )}
                         <div className="mt-2 flex flex-wrap gap-1">

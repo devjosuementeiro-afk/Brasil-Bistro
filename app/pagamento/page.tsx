@@ -85,6 +85,7 @@ export default function PagamentoPage() {
   const [sdkLoaded, setSdkLoaded] = useState(false)
   const [paypalError, setPaypalError] = useState<string | null>(null)
   const [resultMessage, setResultMessage] = useState('')
+  const [deliveryFee, setDeliveryFee] = useState(0)
   const [cardFieldsEligible, setCardFieldsEligible] = useState(false)
   const [cardFieldsLoading, setCardFieldsLoading] = useState(false)
   const [method, setMethod] = useState<'paypal' | 'card'>('card')
@@ -140,6 +141,25 @@ export default function PagamentoPage() {
     setSalvarCartaoEstePedido(checkoutCustomer.prefereSalvarCartao)
   }, [method, checkoutCustomer])
 
+  useEffect(() => {
+    let active = true
+    fetch('/api/checkout-config')
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) return
+        const fee = Number(data?.deliveryFee ?? 0)
+        if (active && Number.isFinite(fee) && fee >= 0) {
+          setDeliveryFee(fee)
+        }
+      })
+      .catch(() => {
+        /* no-op */
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
   function customerPayload() {
     const c = checkoutCustomer
     if (!c) throw new Error('Dados do cliente ausentes.')
@@ -148,11 +168,20 @@ export default function PagamentoPage() {
       email: c.email.trim(),
       telefone: c.telefone.trim(),
       userId: c.userId,
+      fulfillmentType: c.fulfillmentType,
+      enderecoEntrega: c.fulfillmentType === 'delivery' ? c.enderecoEntrega.trim() : null,
       aceitaSmsAtualizacoes: c.aceitaSmsAtualizacoes,
       aceitaEmailAtualizacoes: c.aceitaEmailAtualizacoes,
       consentiuSalvarCartao: method === 'card' && salvarCartaoEstePedido,
     }
   }
+
+  const hasFreeDeliveryPromotion = Boolean(promotionResult?.deliveryFreeEligible)
+  const deliveryFeeApplied =
+    checkoutCustomer?.fulfillmentType === 'delivery' && !hasFreeDeliveryPromotion
+      ? Number(deliveryFee.toFixed(2))
+      : 0
+  const totalWithDeliveryFee = Number((totalWithPromotion + deliveryFeeApplied).toFixed(2))
 
   async function createOrder() {
     const response = await fetch('/api/orders', {
@@ -163,6 +192,7 @@ export default function PagamentoPage() {
         promoCode: promoCode.trim() || null,
         cart: items.map(({ item, quantity, observation, unitPrice, selectedOptions }) => ({
           id: item.id,
+          combo_id: item.comboId ?? null,
           name: item.nome,
           quantity,
           unitAmount: unitPrice,
@@ -188,6 +218,7 @@ export default function PagamentoPage() {
         promoCode: promoCode.trim() || null,
         cart: items.map(({ item, quantity, observation, unitPrice, selectedOptions }) => ({
           id: item.id,
+          combo_id: item.comboId ?? null,
           name: item.nome,
           quantity,
           unitAmount: unitPrice,
@@ -462,6 +493,18 @@ export default function PagamentoPage() {
           <p className="font-semibold text-foreground text-sm">{checkoutCustomer.nome}</p>
           <p>{checkoutCustomer.email}</p>
           <p>{checkoutCustomer.telefone}</p>
+          <p>
+            {checkoutCustomer.fulfillmentType === 'delivery'
+              ? lang === 'pt'
+                ? 'Entrega'
+                : 'Delivery'
+              : lang === 'pt'
+                ? 'Retirada'
+                : 'Take out'}
+          </p>
+          {checkoutCustomer.fulfillmentType === 'delivery' && checkoutCustomer.enderecoEntrega.trim() ? (
+            <p>{checkoutCustomer.enderecoEntrega.trim()}</p>
+          ) : null}
           <Link href="/checkout/dados" className="inline-block pt-1 font-medium text-accent">
             {t.paymentEditDetails}
           </Link>
@@ -553,11 +596,20 @@ export default function PagamentoPage() {
               </span>
             </div>
           ) : null}
+          {deliveryFeeApplied > 0 ? (
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{lang === 'pt' ? 'Taxa de entrega' : 'Delivery fee'}</span>
+              <span className="tabular-nums">
+                {t.currency}
+                {deliveryFeeApplied.toFixed(2)}
+              </span>
+            </div>
+          ) : null}
           <div className="flex justify-between pt-1 font-bold text-xl">
             <span>{t.total}</span>
             <span className="text-accent tabular-nums">
               {t.currency}
-              {totalWithPromotion.toFixed(2)}
+              {totalWithDeliveryFee.toFixed(2)}
             </span>
           </div>
         </div>

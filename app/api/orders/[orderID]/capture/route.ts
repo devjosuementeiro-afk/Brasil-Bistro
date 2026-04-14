@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { parseCustomerPayload } from '@/lib/checkout-customer'
+import { getDeliveryFeeAmount } from '@/lib/store-settings'
+import { computePromotionForOrderCart } from '@/lib/order-promotions'
 
 const PAYPAL_API_BASE =
   process.env.PAYPAL_ENV === 'live'
@@ -37,11 +39,14 @@ async function getPayPalAccessToken() {
 
 type CaptureBody = {
   customer?: unknown
+  promoCode?: string | null
   cart?: Array<{
     id: string
+    combo_id?: string | null
     name: string
     quantity: number
     unitAmount: number
+    categoria_id?: string | null
     observation?: string
     selectedOptions?: Array<{
       optionId: string
@@ -74,9 +79,11 @@ export async function POST(
 
     const safeItems = (body.cart ?? []).map((item) => ({
       id: item.id,
+      combo_id: item.combo_id ?? null,
       name: item.name,
       quantity: Math.max(1, Number(item.quantity) || 1),
       unitAmount: Math.max(0, Number(item.unitAmount) || 0),
+      categoria_id: item.categoria_id ?? null,
       observation: (item.observation ?? '').trim(),
       selectedOptions: (item.selectedOptions ?? []).map((opt) => ({
         optionId: String(opt.optionId),
@@ -87,6 +94,17 @@ export async function POST(
         info: opt.info ?? opt.detailInfo ?? null,
       })),
     }))
+    const promo = await computePromotionForOrderCart(
+      safeItems.map((i) => ({
+        id: i.id,
+        quantity: i.quantity,
+        unitAmount: i.unitAmount,
+        categoria_id: i.categoria_id,
+      })),
+      body.promoCode ?? null
+    )
+    const rawDeliveryFee = customer.fulfillmentType === 'delivery' ? await getDeliveryFeeAmount() : 0
+    const deliveryFee = customer.fulfillmentType === 'delivery' && promo.deliveryFreeEligible ? 0 : rawDeliveryFee
 
     const accessToken = await getPayPalAccessToken()
 
@@ -208,11 +226,14 @@ export async function POST(
             valor_bruto: grossAmount,
             taxa_paypal: paypalFee,
             valor_liquido: netAmount,
+            taxa_entrega: deliveryFee,
             origem_pagamento: 'paypal',
             cliente_nome: customer.nome,
             cliente_email: customer.email,
             cliente_telefone: customer.telefone,
             cliente_user_id: customer.userId,
+            tipo_atendimento: customer.fulfillmentType,
+            endereco_entrega: customer.enderecoEntrega,
             cliente_aceita_sms_atualizacoes: customer.aceitaSmsAtualizacoes,
             cliente_aceita_email_atualizacoes: customer.aceitaEmailAtualizacoes,
             cliente_consentiu_salvar_cartao: customer.consentiuSalvarCartao,
@@ -233,7 +254,8 @@ export async function POST(
             .insert(
               safeItems.map((item) => ({
                 pedido_id: localOrderId,
-                item_id: item.id,
+                item_id: item.combo_id ? null : item.id,
+                combo_id: item.combo_id ?? null,
                 nome_item: item.name,
                 quantidade: item.quantity,
                 preco_unitario: item.unitAmount,

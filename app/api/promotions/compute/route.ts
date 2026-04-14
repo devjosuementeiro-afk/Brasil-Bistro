@@ -4,6 +4,8 @@ import { computePromotionForOrderCart } from '@/lib/order-promotions'
 type Body = {
   items?: Array<{
     item?: { id?: string; categoria_id?: string | null }
+    quantity?: number
+    unitPrice?: number
     totalPrice?: number
   }>
   promoCode?: string | null
@@ -21,8 +23,11 @@ export async function POST(request: Request) {
         if (!Number.isFinite(lineTotal) || lineTotal <= 0) return null
         return {
           id,
-          quantity: 1,
-          unitAmount: lineTotal,
+          quantity: Math.max(1, Math.floor(Number(row.quantity) || 1)),
+          unitAmount:
+            Number.isFinite(Number(row.unitPrice)) && Number(row.unitPrice) > 0
+              ? Number(row.unitPrice)
+              : lineTotal / Math.max(1, Math.floor(Number(row.quantity) || 1)),
           categoria_id: row.item?.categoria_id ?? null,
         }
       })

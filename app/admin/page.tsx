@@ -824,6 +824,12 @@ export default function AdminPage() {
         >
           {t.promoNavLink}
         </Link>
+        <Link
+          href="/admin/combos"
+          className="rounded-xl bg-secondary px-3 py-2.5 text-center text-sm font-bold text-foreground transition-colors hover:bg-secondary/80"
+        >
+          Combos
+        </Link>
         <button
           type="button"
           onClick={toggleLang}
@@ -880,6 +886,12 @@ export default function AdminPage() {
                   className="rounded-xl bg-secondary px-2.5 py-1.5 text-xs font-bold text-muted-foreground"
                 >
                   {t.promoNavLink}
+                </Link>
+                <Link
+                  href="/admin/combos"
+                  className="rounded-xl bg-secondary px-2.5 py-1.5 text-xs font-bold text-muted-foreground"
+                >
+                  Combos
                 </Link>
                 <button
                   type="button"

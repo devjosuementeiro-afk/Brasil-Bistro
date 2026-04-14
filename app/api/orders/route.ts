@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { parseCustomerPayload } from '@/lib/checkout-customer'
 import { computePromotionForOrderCart } from '@/lib/order-promotions'
+import { getDeliveryFeeAmount } from '@/lib/store-settings'
 
 const PAYPAL_API_BASE =
   process.env.PAYPAL_ENV === 'live'
@@ -40,6 +41,7 @@ type OrderRequestBody = {
   promoCode?: string | null
   cart?: Array<{
     id: string
+    combo_id?: string | null
     name: string
     quantity: number
     unitAmount: number
@@ -68,6 +70,7 @@ export async function POST(request: Request) {
 
     const safeItems = (body.cart ?? []).map((item) => ({
       id: item.id,
+      combo_id: item.combo_id ?? null,
       name: item.name,
       quantity: Math.max(1, Number(item.quantity) || 1),
       unitAmount: Math.max(0, Number(item.unitAmount) || 0),
@@ -105,8 +108,11 @@ export async function POST(request: Request) {
       body.promoCode ?? null
     )
 
-    const payable = promo.totalPayable
-    if (payable <= 0 || payable > subtotalBruto + 0.01) {
+    const isDelivery = parsedCustomer.customer.fulfillmentType === 'delivery'
+    const rawDeliveryFee = isDelivery ? await getDeliveryFeeAmount() : 0
+    const deliveryFee = isDelivery && promo.deliveryFreeEligible ? 0 : rawDeliveryFee
+    const payable = promo.totalPayable + deliveryFee
+    if (payable <= 0 || payable > subtotalBruto + deliveryFee + 0.01) {
       return NextResponse.json(
         { error: 'Valor do pedido invalido apos promocoes.' },
         { status: 400 }
@@ -116,6 +122,7 @@ export async function POST(request: Request) {
     const accessToken = await getPayPalAccessToken()
     const itemTotalStr = promo.subtotal.toFixed(2)
     const discountStr = promo.discountAmount.toFixed(2)
+    const deliveryFeeStr = deliveryFee.toFixed(2)
     const amountBreakdown =
       promo.discountAmount > 0.001
         ? {
@@ -127,12 +134,28 @@ export async function POST(request: Request) {
               currency_code: 'USD',
               value: discountStr,
             },
+            ...(deliveryFee > 0
+              ? {
+                  shipping: {
+                    currency_code: 'USD',
+                    value: deliveryFeeStr,
+                  },
+                }
+              : {}),
           }
         : {
             item_total: {
               currency_code: 'USD',
               value: itemTotalStr,
             },
+            ...(deliveryFee > 0
+              ? {
+                  shipping: {
+                    currency_code: 'USD',
+                    value: deliveryFeeStr,
+                  },
+                }
+              : {}),
           }
 
     const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
