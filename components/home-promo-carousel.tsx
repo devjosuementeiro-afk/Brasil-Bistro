@@ -63,21 +63,21 @@ function HomePromoCarouselInner({ slides }: { slides: Slide[] }) {
 
   return (
     <section
-      className="border-b border-border/60 bg-card/40 px-4 pb-5 pt-4"
+      className="border-b border-border/60 bg-card/40 px-4 pb-5 pt-4 md:px-0 md:pt-5"
       aria-label={t.homePromoCarouselAria}
     >
-      <div className="mx-auto max-w-lg overflow-hidden rounded-2xl border border-border/80 bg-muted/30 shadow-[var(--shadow-card)]">
+      <div className="mx-auto max-w-[1040px] overflow-hidden rounded-2xl border border-border/80 bg-muted/30 shadow-[var(--shadow-card)]">
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex touch-pan-y">
             {slides.map((s, i) => (
               <div key={s.id} className="min-w-0 shrink-0 grow-0 basis-full">
-                <div className="relative aspect-[21/9] min-h-[120px] w-full sm:aspect-[2.4/1] sm:min-h-[140px]">
+                <div className="relative aspect-[21/9] min-h-[120px] w-full sm:aspect-[2.4/1] sm:min-h-[160px] md:aspect-[3/1] md:min-h-[220px]">
                   <Image
                     src={s.imageUrl}
                     alt={s.title}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 512px) 100vw, 512px"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1040px"
                     priority={i === 0}
                   />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-10">
